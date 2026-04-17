@@ -1,17 +1,45 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.DS_Store
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
 .venv/
 venv/
-.env
+env/
 
-# Data and artifacts
-data/*.parquet
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+
+# ML experiment outputs
+mlruns/
+wandb/
+lightning_logs/
+*.ckpt
+
+# Data artifacts
+data/**/*.parquet
+!data/**/sample*.parquet
+!data/**/samples/*.parquet
+
+# Model binaries
 models/*.pkl
 models/*.pt
-mlruns/
 
-# Notebook checkpoints
+# Jupyter
 .ipynb_checkpoints/
+
+# Environment files
+.env
+.env.local
