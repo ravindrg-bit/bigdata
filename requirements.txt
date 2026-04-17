@@ -1,3 +1,7 @@
+# Transitional dependency file.
+# Canonical dependency metadata now lives in pyproject.toml.
+# Keep this file pinned to top-level dependencies only.
+
 numpy==1.26.4
 pandas==2.2.3
 pyarrow==15.0.2

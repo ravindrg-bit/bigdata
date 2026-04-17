@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "falabella-risk"
+version = "0.1.0"
+description = "Credit-risk modeling engine with tabular, GNN, hybrid, federated, fairness, and explainability workflows"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Falabella Risk Team" }]
+dependencies = [
+  "numpy==1.26.4",
+  "pandas==2.2.3",
+  "pyarrow==15.0.2",
+  "scipy==1.14.1",
+  "networkx==3.2.1",
+  "python-louvain==0.16",
+  "joblib==1.4.2",
+  "scikit-learn==1.5.2",
+  "xgboost==2.1.1",
+  "mlflow==2.16.2",
+  "shap==0.46.0",
+  "optuna==4.0.0",
+  "fairlearn==0.11.0",
+  "streamlit==1.39.0",
+  "plotly==5.24.1",
+  "matplotlib==3.9.2",
+  "seaborn==0.13.2",
+  "torch==2.4.1",
+  "torch_geometric==2.6.1",
+  "flwr==1.10.0",
+  "reportlab==4.4.10",
+  "imageio==2.37.3",
+  "imageio-ffmpeg==0.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "ruff>=0.6.8",
+  "black>=24.8.0",
+  "pre-commit>=3.8.0",
+  "mypy>=1.11.0",
+]
+notebooks = [
+  "jupyter>=1.1.1",
+  "ipykernel>=6.29.5",
+]
+
+[project.scripts]
+falabella-train-baseline = "falabella_risk.models.train_baseline:main"
+falabella-train-gnn = "falabella_risk.models.train_gnn:main"
+falabella-train-hybrid = "falabella_risk.models.train_hybrid:main"
+falabella-fairness-audit = "falabella_risk.evaluation.fairness_audit:main"
+falabella-federated-train = "falabella_risk.federated.federated_training:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
