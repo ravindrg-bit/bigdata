@@ -122,8 +122,16 @@ def build_network_risk_graph(
         node_x.append(float(x))
         node_y.append(float(y))
 
-        risk = float(sample.loc[node, "neighborhood_default_rate_1hop"]) if node in sample.index else 0.0
-        amount = float(sample.loc[node, "avg_loan_amount_MXN"]) if "avg_loan_amount_MXN" in sample.columns and node in sample.index else 2000.0
+        risk = (
+            float(sample.loc[node, "neighborhood_default_rate_1hop"])
+            if node in sample.index
+            else 0.0
+        )
+        amount = (
+            float(sample.loc[node, "avg_loan_amount_MXN"])
+            if "avg_loan_amount_MXN" in sample.columns and node in sample.index
+            else 2000.0
+        )
 
         node_color.append(risk)
         node_size.append(float(np.clip(6 + (amount / 1500.0), 6, 22)))
@@ -158,7 +166,9 @@ def build_network_risk_graph(
     return fig
 
 
-def build_shap_waterfall(top_drivers: list[dict[str, object]], threshold: float, risk_score: float) -> go.Figure:
+def build_shap_waterfall(
+    top_drivers: list[dict[str, object]], threshold: float, risk_score: float
+) -> go.Figure:
     labels = [str(item["label"]) for item in top_drivers]
     effects = [float(item["shap_contribution"]) for item in top_drivers]
 

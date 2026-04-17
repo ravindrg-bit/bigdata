@@ -282,9 +282,7 @@ def train_federated(
         },
         "federated_metrics": fed_metrics,
         "centralized_metrics": centralized_metrics,
-        "auc_gap_vs_centralized": float(
-            centralized_metrics["auc"] - fed_metrics["auc"]
-        ),
+        "auc_gap_vs_centralized": float(centralized_metrics["auc"] - fed_metrics["auc"]),
     }
 
     model_out.parent.mkdir(parents=True, exist_ok=True)

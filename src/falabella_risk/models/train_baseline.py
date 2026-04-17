@@ -6,7 +6,6 @@ from time import perf_counter
 
 import joblib
 import mlflow
-import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, f1_score, roc_auc_score

@@ -50,7 +50,11 @@ class ExplainabilityEngine:
             borrower_id = int(float(data.iloc[0]["borrower_id"]))
             data = data.drop(columns=["borrower_id"], errors="ignore")
 
-        if self.embeddings is not None and borrower_id is not None and borrower_id in self.embeddings.index:
+        if (
+            self.embeddings is not None
+            and borrower_id is not None
+            and borrower_id in self.embeddings.index
+        ):
             emb_row = self.embeddings.loc[borrower_id]
             if isinstance(emb_row, pd.DataFrame):
                 emb_row = emb_row.iloc[0]

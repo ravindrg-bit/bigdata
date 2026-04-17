@@ -49,7 +49,9 @@ features = pd.read_parquet(features_path)
 with st.sidebar:
     st.header("Controls")
     model_toggle = st.selectbox("Model mode", ["Grameen-only", "Tala-only", "Hybrid"], index=2)
-    sample_size = st.slider("Portfolio sample size", min_value=100, max_value=5000, value=1200, step=100)
+    sample_size = st.slider(
+        "Portfolio sample size", min_value=100, max_value=5000, value=1200, step=100
+    )
     phase_view = st.selectbox(
         "Rollout phase view",
         ["Month 1 Rule-Based", "Months 2-3 Hybrid-Lite", "Month 3+ Full Hybrid"],
@@ -126,10 +128,14 @@ with tab1:
 
 with tab2:
     st.subheader("Single Borrower Lookup")
-    input_mode = st.radio("Input Source", ["Existing Borrower", "Manual Applicant Form"], horizontal=True)
+    input_mode = st.radio(
+        "Input Source", ["Existing Borrower", "Manual Applicant Form"], horizontal=True
+    )
 
     if input_mode == "Existing Borrower":
-        borrower_id = st.selectbox("Borrower ID", options=features["borrower_id"].head(5000).tolist())
+        borrower_id = st.selectbox(
+            "Borrower ID", options=features["borrower_id"].head(5000).tolist()
+        )
         row = features.loc[features["borrower_id"] == borrower_id].iloc[0].copy()
     else:
         base_row = features.median(numeric_only=True)
@@ -139,12 +145,16 @@ with tab2:
 
         curp_hash = st.text_input("CURP hash", value="MANUAL_CURP_HASH")
         ine_verified = st.selectbox("INE verified", [0, 1], index=1)
-        store_visits = st.number_input("Store visit count", min_value=0, max_value=50, value=4, step=1)
+        store_visits = st.number_input(
+            "Store visit count", min_value=0, max_value=50, value=4, step=1
+        )
         codi_wallet = st.selectbox("CoDi wallet flag", [0, 1], index=1)
         rural_flag = st.selectbox("Rural flag", [0, 1], index=0)
         indigenous_proxy = st.selectbox("Indigenous proxy", [0, 1], index=0)
         call_volume = st.number_input("Call volume", min_value=0, max_value=1000, value=80, step=1)
-        routine_score = st.slider("Routine score", min_value=0.0, max_value=1.0, value=0.6, step=0.01)
+        routine_score = st.slider(
+            "Routine score", min_value=0.0, max_value=1.0, value=0.6, step=0.01
+        )
         messaging_frequency = st.number_input(
             "Messaging frequency", min_value=0, max_value=1000, value=42, step=1
         )
@@ -185,7 +195,9 @@ with tab2:
     )
 
     if explain_engine is not None:
-        explanation = explain_engine.predict_explain(row.drop(labels=["default_flag"], errors="ignore"))
+        explanation = explain_engine.predict_explain(
+            row.drop(labels=["default_flag"], errors="ignore")
+        )
         st.write("Top explainability drivers")
         st.dataframe(pd.DataFrame(explanation["top_drivers"]), use_container_width=True)
         st.caption(f"Explainability latency: {explanation['latency_ms']:.2f} ms")
@@ -260,12 +272,16 @@ with tab3:
             str(report.get("pass_criteria", {}).get("all_parity_gaps_below_threshold", False)),
         )
     else:
-        st.warning("Fairness report not found. Run python -m falabella_risk.evaluation.fairness_audit first.")
+        st.warning(
+            "Fairness report not found. Run python -m falabella_risk.evaluation.fairness_audit first."
+        )
 
     if explain_engine is not None:
         sample_rows = features.sample(min(300, len(features)), random_state=42)
         try:
-            importance = explain_engine.global_feature_importance(sample_rows, max_rows=300).head(20)
+            importance = explain_engine.global_feature_importance(sample_rows, max_rows=300).head(
+                20
+            )
             if not importance.empty:
                 fig = px.bar(
                     importance.sort_values("mean_abs_shap", ascending=True),

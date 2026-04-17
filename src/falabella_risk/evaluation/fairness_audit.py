@@ -20,7 +20,9 @@ def safe_auc(y_true: np.ndarray, y_score: np.ndarray) -> float | None:
     return float(roc_auc_score(y_true, y_score))
 
 
-def classification_metrics(y_true: np.ndarray, y_score: np.ndarray, y_pred: np.ndarray) -> dict[str, float | None]:
+def classification_metrics(
+    y_true: np.ndarray, y_score: np.ndarray, y_pred: np.ndarray
+) -> dict[str, float | None]:
     auc = safe_auc(y_true, y_score)
     pr_auc = float(average_precision_score(y_true, y_score))
     brier = float(brier_score_loss(y_true, y_score))
@@ -212,9 +214,7 @@ def run_fairness_audit(
     y_pred_base = (y_score >= 0.5).astype(int)
     baseline_metrics = classification_metrics(y_true, y_score, y_pred_base)
 
-    sensitive_test = {
-        col: test_df[col].astype(int).to_numpy() for col in SENSITIVE_COLUMNS
-    }
+    sensitive_test = {col: test_df[col].astype(int).to_numpy() for col in SENSITIVE_COLUMNS}
 
     baseline_fairness = {
         col: group_fairness_summary(y_true, y_score, y_pred_base, values, col)
@@ -222,8 +222,12 @@ def run_fairness_audit(
     }
 
     target_positive_rate = float(y_pred_base.mean())
-    threshold_maps = fit_threshold_maps(y_score, sensitive_test, target_positive_rate=target_positive_rate)
-    y_pred_mitigated, threshold_row = predict_with_threshold_maps(y_score, sensitive_test, threshold_maps)
+    threshold_maps = fit_threshold_maps(
+        y_score, sensitive_test, target_positive_rate=target_positive_rate
+    )
+    y_pred_mitigated, threshold_row = predict_with_threshold_maps(
+        y_score, sensitive_test, threshold_maps
+    )
 
     mitigated_metrics = classification_metrics(y_true, y_score, y_pred_mitigated)
     mitigated_fairness = {
@@ -236,9 +240,7 @@ def run_fairness_audit(
         for col, values in sensitive_test.items()
     }
 
-    gaps = [
-        float(mitigated_fairness[col]["demographic_parity_gap"]) for col in SENSITIVE_COLUMNS
-    ]
+    gaps = [float(mitigated_fairness[col]["demographic_parity_gap"]) for col in SENSITIVE_COLUMNS]
 
     result = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -343,7 +345,10 @@ def main() -> None:
     print(f"Output CSV: {args.output_csv}")
     print(
         "Mitigated parity gaps:",
-        {k: round(v["demographic_parity_gap"], 4) for k, v in report["mitigation"]["fairness"].items()},
+        {
+            k: round(v["demographic_parity_gap"], 4)
+            for k, v in report["mitigation"]["fairness"].items()
+        },
     )
 
 

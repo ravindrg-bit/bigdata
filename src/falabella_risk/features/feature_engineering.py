@@ -150,7 +150,9 @@ def build_features(data_dir: Path, output_path: Path, seed: int) -> pd.DataFrame
         .reset_index(drop=True)
     )
 
-    behavioral = cdr[["borrower_id", "call_routine_score", "messaging_frequency", "weekly_call_cv"]].merge(
+    behavioral = cdr[
+        ["borrower_id", "call_routine_score", "messaging_frequency", "weekly_call_cv"]
+    ].merge(
         mobile[
             [
                 "borrower_id",
@@ -175,7 +177,20 @@ def build_features(data_dir: Path, output_path: Path, seed: int) -> pd.DataFrame
         }
     )
 
-    group_features = borrowers[["borrower_id", "group_id", "prior_CMR_usage", "store_visit_count", "CoDi_wallet_flag", "INE_verified_flag", "rural_flag", "indigenous_proxy", "age", "gender"]].merge(
+    group_features = borrowers[
+        [
+            "borrower_id",
+            "group_id",
+            "prior_CMR_usage",
+            "store_visit_count",
+            "CoDi_wallet_flag",
+            "INE_verified_flag",
+            "rural_flag",
+            "indigenous_proxy",
+            "age",
+            "gender",
+        ]
+    ].merge(
         groups[["group_id", "cycle_number", "cohesion_score"]],
         on="group_id",
         how="left",
@@ -193,10 +208,10 @@ def build_features(data_dir: Path, output_path: Path, seed: int) -> pd.DataFrame
         .merge(labels, on="borrower_id", how="left")
     )
 
-    feature_table["sequential_lending_flag"] = (feature_table["loan_count"].fillna(0) >= 2).astype(int)
-    feature_table["peer_default_contagion_score"] = feature_table[
-        "neighborhood_default_rate_1hop"
-    ]
+    feature_table["sequential_lending_flag"] = (feature_table["loan_count"].fillna(0) >= 2).astype(
+        int
+    )
+    feature_table["peer_default_contagion_score"] = feature_table["neighborhood_default_rate_1hop"]
 
     feature_table["gender_female_flag"] = (feature_table["gender"] == "F").astype(int)
     feature_table = feature_table.drop(columns=["gender"])
@@ -221,7 +236,9 @@ def build_features(data_dir: Path, output_path: Path, seed: int) -> pd.DataFrame
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build unified feature table from synthetic risk data.")
+    parser = argparse.ArgumentParser(
+        description="Build unified feature table from synthetic risk data."
+    )
     parser.add_argument(
         "--data-dir",
         type=Path,
@@ -234,7 +251,9 @@ def parse_args() -> argparse.Namespace:
         default=Path("data/processed/features.parquet"),
         help="Output feature table parquet path.",
     )
-    parser.add_argument("--seed", type=int, default=42, help="Random seed used for graph algorithms.")
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed used for graph algorithms."
+    )
     return parser.parse_args()
 
 

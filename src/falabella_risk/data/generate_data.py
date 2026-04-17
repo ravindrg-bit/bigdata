@@ -70,9 +70,9 @@ def build_borrowers(
     age = np.clip(rng.normal(36, 10, size=n), 18, 72).round().astype(np.int64)
     gender = rng.choice(np.array(["F", "M"]), size=n, p=[0.53, 0.47])
     rural_flag = rng.binomial(1, 0.34, size=n).astype(np.int64)
-    indigenous_proxy = (
-        rng.random(size=n) < np.clip(0.08 + 0.18 * rural_flag, 0.02, 0.45)
-    ).astype(np.int64)
+    indigenous_proxy = (rng.random(size=n) < np.clip(0.08 + 0.18 * rural_flag, 0.02, 0.45)).astype(
+        np.int64
+    )
 
     ine_prob = np.clip(0.92 - 0.13 * indigenous_proxy - 0.06 * rural_flag, 0.55, 0.99)
     ine_verified = rng.binomial(1, ine_prob, size=n).astype(np.int64)
@@ -154,7 +154,9 @@ def build_edges(
     dst = edges_np[:, 1]
 
     borrower_group = borrowers.set_index("borrower_id")["group_id"].to_dict()
-    same_group = np.array([borrower_group[int(s)] == borrower_group[int(d)] for s, d in zip(src, dst)])
+    same_group = np.array(
+        [borrower_group[int(s)] == borrower_group[int(d)] for s, d in zip(src, dst)]
+    )
 
     tie_strength = np.clip(rng.beta(2.2, 1.7, size=len(src)) + 0.15 * same_group, 0.05, 1.0)
     whatsapp_prob = np.clip(0.18 + 0.65 * tie_strength, 0.02, 0.98)
@@ -163,9 +165,7 @@ def build_edges(
     codi_wallet = borrowers.set_index("borrower_id")["CoDi_wallet_flag"].to_dict()
     codi_link_prob = np.array(
         [
-            0.08
-            + 0.52 * (codi_wallet[int(s)] == 1 and codi_wallet[int(d)] == 1)
-            + 0.14 * same
+            0.08 + 0.52 * (codi_wallet[int(s)] == 1 and codi_wallet[int(d)] == 1) + 0.14 * same
             for s, d, same in zip(src, dst, same_group)
         ],
         dtype=float,
@@ -230,9 +230,11 @@ def build_mobile_events(borrowers: pd.DataFrame, rng: np.random.Generator) -> pd
         rng.normal(0.64 - 0.26 * falabella_app_session_flag, 0.13, size=n), 0.05, 1.5
     )
     codi_txn_regularity = np.clip(rng.normal(0.5 + 0.25 * codi, 0.17, size=n), 0.02, 0.99)
-    app_session_recency_days = np.clip(
-        rng.normal(9 - 4.2 * falabella_app_session_flag + 2.8 * rural, 5.0, size=n), 0, 60
-    ).round().astype(np.int64)
+    app_session_recency_days = (
+        np.clip(rng.normal(9 - 4.2 * falabella_app_session_flag + 2.8 * rural, 5.0, size=n), 0, 60)
+        .round()
+        .astype(np.int64)
+    )
 
     mobile_events = pd.DataFrame(
         {
@@ -336,11 +338,19 @@ def build_loans_and_repayments(
     default_lookup = labels.set_index("borrower_id")["default_flag"]
     borrower_default = default_lookup.loc[borrower_rep].to_numpy(dtype=np.int64)
 
-    borrower_store = borrowers.set_index("borrower_id")["store_visit_count"].loc[borrower_rep].to_numpy()
-    borrower_prior = (
-        borrowers.set_index("borrower_id")["prior_CMR_usage"].loc[borrower_rep].notna().astype(int).to_numpy()
+    borrower_store = (
+        borrowers.set_index("borrower_id")["store_visit_count"].loc[borrower_rep].to_numpy()
     )
-    borrower_codi = borrowers.set_index("borrower_id")["CoDi_wallet_flag"].loc[borrower_rep].to_numpy()
+    borrower_prior = (
+        borrowers.set_index("borrower_id")["prior_CMR_usage"]
+        .loc[borrower_rep]
+        .notna()
+        .astype(int)
+        .to_numpy()
+    )
+    borrower_codi = (
+        borrowers.set_index("borrower_id")["CoDi_wallet_flag"].loc[borrower_rep].to_numpy()
+    )
     borrower_rural = borrowers.set_index("borrower_id")["rural_flag"].loc[borrower_rep].to_numpy()
 
     group_cohesion = groups.set_index("group_id")["cohesion_score"]
@@ -353,11 +363,15 @@ def build_loans_and_repayments(
         p=[0.44, 0.26, 0.2, 0.1],
     )
 
-    base_amount = np.exp(np.log(2300 + 250 * borrower_store) + rng.normal(0, 0.52, size=len(loan_id)))
+    base_amount = np.exp(
+        np.log(2300 + 250 * borrower_store) + rng.normal(0, 0.52, size=len(loan_id))
+    )
     amount_mxn = np.clip(base_amount * (1 + 0.2 * borrower_default), 500, 25000).round(2)
 
     cmr_prob = np.clip(0.16 + 0.34 * borrower_prior + 0.08 * borrower_codi, 0.05, 0.95)
-    oxxo_prob = np.clip(0.22 + 0.18 * borrower_rural + 0.06 * (product_type == "cash_advance"), 0.05, 0.95)
+    oxxo_prob = np.clip(
+        0.22 + 0.18 * borrower_rural + 0.06 * (product_type == "cash_advance"), 0.05, 0.95
+    )
 
     cmr_credit_line_flag = rng.binomial(1, cmr_prob, size=len(loan_id)).astype(np.int64)
     oxxo_cash_backed_flag = rng.binomial(1, oxxo_prob, size=len(loan_id)).astype(np.int64)
@@ -371,10 +385,7 @@ def build_loans_and_repayments(
     latency = np.clip(
         np.round(
             rng.normal(
-                loc=1.5
-                + 6.0 * borrower_default
-                + 1.3 * (1 - borrower_codi)
-                - 1.6 * cohesion_rep,
+                loc=1.5 + 6.0 * borrower_default + 1.3 * (1 - borrower_codi) - 1.6 * cohesion_rep,
                 scale=4.7,
                 size=len(loan_id),
             )

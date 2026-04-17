@@ -6,7 +6,6 @@ from time import perf_counter
 
 import joblib
 import mlflow
-import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score, brier_score_loss, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
@@ -117,7 +116,9 @@ def train_hybrid(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train hybrid ensemble from tabular features and GNN embeddings.")
+    parser = argparse.ArgumentParser(
+        description="Train hybrid ensemble from tabular features and GNN embeddings."
+    )
     parser.add_argument(
         "--features",
         type=Path,

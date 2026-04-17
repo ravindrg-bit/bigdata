@@ -57,7 +57,9 @@ class GraphSAGEClassifier(torch.nn.Module):
         self.out = torch.nn.Linear(hidden_channels, 2)
         self.dropout = torch.nn.Dropout(p=0.2)
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, edge_index: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         h = self.conv1(x, edge_index)
         h = torch.relu(h)
         h = self.dropout(h)
@@ -166,7 +168,9 @@ def train_graphsage(
     emb_df.columns = ["borrower_id"] + [f"emb_{i:03d}" for i in range(emb_df.shape[1] - 1)]
 
     embeddings_out.parent.mkdir(parents=True, exist_ok=True)
-    pq.write_table(pa.Table.from_pandas(emb_df, preserve_index=False), embeddings_out, compression="snappy")
+    pq.write_table(
+        pa.Table.from_pandas(emb_df, preserve_index=False), embeddings_out, compression="snappy"
+    )
 
     print(f"Saved GraphSAGE model to: {model_out}")
     print(f"Saved embeddings to: {embeddings_out}")
