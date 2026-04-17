@@ -19,7 +19,8 @@ env/
 Thumbs.db
 
 # IDE/editor
-.vscode/
+.vscode/*
+!.vscode/settings.json.example
 .idea/
 
 # ML experiment outputs
