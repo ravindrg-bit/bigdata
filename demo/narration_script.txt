@@ -1,0 +1,29 @@
+Falabella Hybrid Risk Engine Demo
+- 1) Applicant intake from store + mobile signals
+- 2) Phase-based scorer selects rule / hybrid-lite / full hybrid
+- 3) Risk score, credit line, and explainability displayed
+
+Portfolio Risk Tab
+- Network view highlights borrower communities
+- Color encodes neighborhood risk pressure
+- Scatter checks default vs repayment latency signal
+
+Borrower Lookup Tab
+- Manual form accepts CURP hash, INE flag, store visits, CoDi behavior
+- Model returns risk score, decision, and credit line range
+- SHAP waterfall explains top risk drivers
+
+Ethics Audit Tab
+- Displays subgroup parity and equal opportunity gaps
+- Shows post-mitigation fairness status
+- Supports model card download for governance
+
+Federated Mode
+- FedAvg simulation across four regional shards
+- Dashboard can switch to federated model scoring
+- Benchmark compares federated vs centralized AUC
+
+Decision Operations
+- Loan officer override is logged with timestamp and reason
+- Audit artifacts stored for compliance reviews
+- End-to-end architecture supports phased market entry

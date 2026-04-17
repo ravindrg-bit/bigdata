@@ -1,0 +1,33 @@
+{
+  "seed": 42,
+  "clients": [
+    "CDMX",
+    "Guadalajara",
+    "Monterrey",
+    "Yucatan"
+  ],
+  "rounds": 8,
+  "local_epochs": 2,
+  "centralized_epochs": 24,
+  "learning_rate": 0.01,
+  "dataset": {
+    "train_rows": 10500,
+    "val_rows": 2250,
+    "test_rows": 2250
+  },
+  "federated_metrics": {
+    "auc": 0.9029575871030915,
+    "pr_auc": 0.6800277475319354,
+    "brier": 0.18576597706669593,
+    "accuracy": 0.7746666666666666,
+    "latency_ms_per_row": 4.024048232369953e-05
+  },
+  "centralized_metrics": {
+    "auc": 0.89840568940008,
+    "pr_auc": 0.6814124155288038,
+    "brier": 0.1770736996787514,
+    "accuracy": 0.7675555555555555,
+    "latency_ms_per_row": 2.2722304695182378e-05
+  },
+  "auc_gap_vs_centralized": -0.004551897703011454
+}
