@@ -16,7 +16,7 @@ Build a hybrid credit risk model for thin-file lending using synthetic data, gra
 
 ## Key Generated Artifacts
 1. Models: baseline_xgb.pkl, graphsage.pt, hybrid_ensemble.pkl, federated_model.pt
-2. Reports: data/fairness_report.json, data/federated_report.json
+2. Reports: reports/fairness_report.json, reports/federated_report.json
 3. Notebooks: roadmap 01-06 sequence available under notebooks/
 
 ## Remaining Milestones
