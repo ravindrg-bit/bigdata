@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/ganenthraravindran/Desktop/BIG%20DATA%20PROJECT/falabella-risk-engine/mlruns/148668678563615386/4713ec81138045afa1bdc505288ade11/artifacts
+end_time: 1776430030194
+entry_point_name: ''
+experiment_id: '148668678563615386'
+lifecycle_stage: active
+run_id: 4713ec81138045afa1bdc505288ade11
+run_name: baseline_lr_xgb
+run_uuid: 4713ec81138045afa1bdc505288ade11
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1776430027493
+status: 3
+tags: []
+user_id: ganenthraravindran

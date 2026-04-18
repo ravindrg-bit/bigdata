@@ -67,14 +67,31 @@ def build_borrowers(
     group_probs = group_probs / group_probs.sum()
     group_assignment = rng.choice(groups["group_id"].to_numpy(), size=n, p=group_probs)
 
-    age = np.clip(rng.normal(36, 10, size=n), 18, 72).round().astype(np.int64)
-    gender = rng.choice(np.array(["F", "M"]), size=n, p=[0.53, 0.47])
-    rural_flag = rng.binomial(1, 0.34, size=n).astype(np.int64)
-    indigenous_proxy = (rng.random(size=n) < np.clip(0.08 + 0.18 * rural_flag, 0.02, 0.45)).astype(
+    # Age: micro-credit applicant profile (Compartamos Banco / Gentera Mexico).
+    # Skewed younger than national INEGI adult distribution — thin-file borrowers peak at 25–44.
+    # Older adults (55+) typically have established credit histories and are not thin-file.
+    # Band proportions: 18-24=18%, 25-34=32%, 35-44=28%, 45-54=15%, 55-64=6%, 65-72=1%
+    _age_band_probs = np.array([0.18, 0.32, 0.28, 0.15, 0.06, 0.01])
+    _age_band_edges = np.array([18, 25, 35, 45, 55, 65, 73])
+    _band = rng.choice(len(_age_band_probs), size=n, p=_age_band_probs)
+    age = (_age_band_edges[_band] + (rng.random(size=n) * (_age_band_edges[_band + 1] - _age_band_edges[_band])).astype(int)).astype(np.int64)
+
+    # Gender: 70% F / 30% M — Mexico micro-credit industry profile.
+    # Compartamos Banco (largest LA microfinance institution): ~70% female borrowers.
+    # Model card flags gender_female_flag as a fairness-sensitive attribute.
+    gender = rng.choice(np.array(["F", "M"]), size=n, p=[0.70, 0.30])
+
+    # Rural: 21% — INEGI CPV 2020 (localities < 2,500 inhabitants).
+    rural_flag = rng.binomial(1, 0.21, size=n).astype(np.int64)
+
+    # Indigenous self-identification: ~18% nationally (INEGI CPV 2020: 23.2M / 126M total).
+    # Urban baseline 14%, rural 33% — consistent with INEGI spatial distribution.
+    indigenous_proxy = (rng.random(size=n) < np.clip(0.14 + 0.19 * rural_flag, 0.02, 0.50)).astype(
         np.int64
     )
 
-    ine_prob = np.clip(0.92 - 0.13 * indigenous_proxy - 0.06 * rural_flag, 0.55, 0.99)
+    # INE coverage: ~90% of Mexican adults — adjusted base 0.94.
+    ine_prob = np.clip(0.94 - 0.13 * indigenous_proxy - 0.06 * rural_flag, 0.55, 0.99)
     ine_verified = rng.binomial(1, ine_prob, size=n).astype(np.int64)
 
     store_visit_count = (rng.poisson(3.8, size=n) + 1).astype(np.int64)
@@ -83,8 +100,10 @@ def build_borrowers(
     prior_cmr_usage_raw = np.where(prior_cmr_mask, rng.integers(1, 15, size=n), np.nan)
     prior_cmr_usage = pd.Series(prior_cmr_usage_raw).round().astype("Int64")
 
+    # CoDi intercept lowered from -0.7 to -3.0 to match Banxico 2021 adoption (~12% of adults).
+    # Source: Banxico — CoDi system statistics September 2021 (10.7M validated accounts / ~90M adults).
     codi_prob = sigmoid(
-        -0.7
+        -3.0
         + 0.19 * store_visit_count
         - 0.03 * (age - 35)
         - 0.45 * rural_flag
@@ -93,11 +112,107 @@ def build_borrowers(
     )
     codi_wallet_flag = rng.binomial(1, np.clip(codi_prob, 0.02, 0.98), size=n).astype(np.int64)
 
+    # City: top 18 ZMVMs weighted by INEGI CPV 2020 population + residual "Other (urban)".
+    # Mérida intentionally oversampled (1.3 → 9.0) to ensure the Yucatán federated node
+    # has sufficient training samples (~1,200 records). Model card names Yucatán as one
+    # of 4 FedAvg clients: CDMX, Monterrey, Guadalajara, Yucatán.
+    # Rural borrowers assigned "Rural" per rural_flag.
+    _cities = np.array([
+        "Ciudad de México", "Guadalajara", "Monterrey", "Puebla", "Toluca",
+        "Tijuana", "León", "Ciudad Juárez", "La Laguna", "Querétaro",
+        "Mérida", "San Luis Potosí", "Mexicali", "Aguascalientes", "Chihuahua",
+        "Saltillo", "Hermosillo", "Veracruz", "Other (urban)",
+    ])
+    _urban_pops = np.array([21.8, 5.3, 5.3, 3.2, 2.3, 2.0, 1.9, 1.5, 1.4, 1.3,
+                             9.0, 1.2, 1.1, 1.1, 1.0, 1.0, 0.9, 0.8, 26.1])
+    _urban_weights = _urban_pops / _urban_pops.sum()
+    _city_urban = rng.choice(_cities, size=n, p=_urban_weights)
+    city = np.where(rural_flag == 1, "Rural", _city_urban)
+
+    # Married flag: 38% casado + 20% unión libre = 58% in partnership (INEGI CPV 2020).
+    # Probability rises with age via sigmoid calibrated to 58% national mean.
+    _married_prob = sigmoid(-0.8 + 0.045 * (age - 18).astype(float))
+    married_flag = rng.binomial(1, np.clip(_married_prob, 0.05, 0.95), size=n).astype(np.int64)
+
+    # Number of children: Poisson λ correlated with age, rural, married.
+    # INEGI CPV 2020 / CONAPO 2020: TFR 1.6 nationally; rural ~2.1, urban ~1.5.
+    _children_lambda = np.clip(
+        -0.8 + 0.065 * (age - 18).astype(float) + 0.5 * rural_flag + 0.3 * married_flag,
+        0.01, 7.0,
+    )
+    num_children = rng.poisson(_children_lambda, size=n).astype(np.int64)
+
+    # Monthly income (MXN): log-normal calibrated to INEGI ENIGH 2022.
+    # Urban individual median ~8,000 MXN/month; rural ~4,500.
+    # Age premium: Gaussian peak at 42. Gender gap: women ~86% of men (INEGI ECAP 2022).
+    _base_log = np.where(rural_flag == 1, 8.41, 8.99)
+    _age_premium = 0.25 * np.exp(-((age - 42) / 15.0) ** 2)
+    _gender_penalty = 0.155 * (gender == "F").astype(float)
+    _log_income_mu = _base_log + _age_premium - _gender_penalty
+    monthly_income_MXN = np.clip(
+        np.exp(_log_income_mu + rng.normal(0, 0.65, size=n)), 1200.0, 150000.0
+    ).round(2)
+
+    # Rent (MXN): 30% of households nationally rent; lower in rural areas.
+    # Source: INEGI ENIGH 2022 — 30% of households are renters; urban ~35%, rural ~15%.
+    # Amount: log-normal; urban median ~5,500 MXN, rural median ~2,000 MXN.
+    _p_rent = np.where(rural_flag == 1, 0.15, 0.35)
+    _has_rent = rng.binomial(1, _p_rent, size=n)
+    _rent_log_mu = np.where(rural_flag == 1, 7.60, 8.61)
+    rent_MXN = np.where(
+        _has_rent == 1,
+        np.clip(np.exp(_rent_log_mu + rng.normal(0, 0.50, size=n)), 800.0, 30000.0).round(2),
+        0.0,
+    )
+
+    # Mobile phone plan (MXN): ~30% of lines are postpaid (IFT 2022); prepaid has no fixed liability.
+    # Urban ~35% postpaid, rural ~15% postpaid → national ~30%.
+    # Amount: log-normal; median ~380 MXN/month (IFT average postpaid plan 2022).
+    _p_mobile = np.where(rural_flag == 1, 0.15, 0.35)
+    _has_mobile = rng.binomial(1, _p_mobile, size=n)
+    mobile_phone_plan_MXN = np.where(
+        _has_mobile == 1,
+        np.clip(np.exp(5.94 + rng.normal(0, 0.45, size=n)), 150.0, 2000.0).round(2),
+        0.0,
+    )
+
+    # Electricity + water (MXN): ~93% urban, ~80% rural connected (INEGI CPV 2020 / CFE 2022).
+    # Combined monthly: urban median ~580 MXN, rural median ~380 MXN.
+    _p_elec = np.where(rural_flag == 1, 0.80, 0.93)
+    _has_elec = rng.binomial(1, _p_elec, size=n)
+    _elec_log_mu = np.where(rural_flag == 1, 5.94, 6.36)
+    electricity_water_MXN = np.where(
+        _has_elec == 1,
+        np.clip(np.exp(_elec_log_mu + rng.normal(0, 0.40, size=n)), 80.0, 3000.0).round(2),
+        0.0,
+    )
+
+    # Informal loans (MXN): 23% of adults used informal credit in 2021 (ENIF 2021).
+    # Rural ~30%, urban ~20% → national ~22%. Higher in rural/lower-income communities.
+    _p_informal = np.where(rural_flag == 1, 0.30, 0.20)
+    _has_informal = rng.binomial(1, _p_informal, size=n)
+    informal_loans_MXN = np.where(
+        _has_informal == 1,
+        np.clip(np.exp(6.80 + rng.normal(0, 0.60, size=n)), 200.0, 15000.0).round(2),
+        0.0,
+    )
+
+    # Formal debt payments (MXN): thin-file adjusted to ~13% (vs 32.7% national ENIF 2021).
+    # Thin-file applicants have limited formal credit history by definition.
+    # DTI 10–35% for credit holders (Banxico household financial burden data).
+    _p_formal = np.clip(0.05 + 0.05 * (1 - rural_flag) + 0.000005 * monthly_income_MXN, 0.02, 0.40)
+    _has_formal = rng.binomial(1, _p_formal, size=n)
+    _formal_dti = rng.uniform(0.10, 0.35, size=n)
+    formal_debt_payments_MXN = np.where(
+        _has_formal == 1, (monthly_income_MXN * _formal_dti).round(2), 0.0
+    )
+
     borrowers = pd.DataFrame(
         {
             "borrower_id": borrower_ids,
             "age": age,
             "gender": gender,
+            "city": city,
             "rural_flag": rural_flag,
             "indigenous_proxy": indigenous_proxy,
             "CURP_hash": stable_curp_hash(borrower_ids, cfg.seed),
@@ -105,6 +220,14 @@ def build_borrowers(
             "store_visit_count": store_visit_count,
             "prior_CMR_usage": prior_cmr_usage,
             "CoDi_wallet_flag": codi_wallet_flag,
+            "married_flag": married_flag,
+            "num_children": num_children,
+            "monthly_income_MXN": monthly_income_MXN,
+            "rent_MXN": rent_MXN,
+            "mobile_phone_plan_MXN": mobile_phone_plan_MXN,
+            "electricity_water_MXN": electricity_water_MXN,
+            "informal_loans_MXN": informal_loans_MXN,
+            "formal_debt_payments_MXN": formal_debt_payments_MXN,
             "group_id": group_assignment,
         }
     )
