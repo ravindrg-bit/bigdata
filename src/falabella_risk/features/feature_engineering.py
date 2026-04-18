@@ -57,7 +57,35 @@ def build_graph_features(
     defaults = label_map.loc[borrower_ids].to_numpy(dtype=float)
 
     nbr_default_rate_1hop = compute_neighbor_aggregate(n, src_idx, dst_idx, defaults)
-    nbr_default_rate_2hop = compute_neighbor_aggregate(n, src_idx, dst_idx, nbr_default_rate_1hop)
+
+    nbr_default_sum = np.bincount(src_idx, weights=defaults[dst_idx], minlength=n) + np.bincount(
+        dst_idx, weights=defaults[src_idx], minlength=n
+    )
+    global_default_rate = float(defaults.mean())
+
+    # Remove the focal borrower's default from neighbor aggregates to avoid target leakage.
+    deg_src = degree[src_idx]
+    deg_dst = degree[dst_idx]
+
+    from_dst_to_src = np.full(src_idx.shape[0], global_default_rate, dtype=float)
+    dst_can_exclude = deg_dst > 1
+    from_dst_to_src[dst_can_exclude] = (
+        nbr_default_sum[dst_idx[dst_can_exclude]] - defaults[src_idx[dst_can_exclude]]
+    ) / (deg_dst[dst_can_exclude] - 1)
+
+    from_src_to_dst = np.full(src_idx.shape[0], global_default_rate, dtype=float)
+    src_can_exclude = deg_src > 1
+    from_src_to_dst[src_can_exclude] = (
+        nbr_default_sum[src_idx[src_can_exclude]] - defaults[dst_idx[src_can_exclude]]
+    ) / (deg_src[src_can_exclude] - 1)
+
+    second_hop_sum = np.bincount(src_idx, weights=from_dst_to_src, minlength=n) + np.bincount(
+        dst_idx, weights=from_src_to_dst, minlength=n
+    )
+
+    nbr_default_rate_2hop = np.full(n, global_default_rate, dtype=float)
+    has_neighbors = degree > 0
+    nbr_default_rate_2hop[has_neighbors] = second_hop_sum[has_neighbors] / degree[has_neighbors]
 
     g = nx.Graph()
     g.add_nodes_from(borrower_ids.tolist())
