@@ -20,7 +20,13 @@ try:
         determine_cold_start_phase,
         determine_cold_start_phase_existing,
     )
-    from .model_loader import get_decision_threshold, get_explainer, get_feature_label, get_model
+    from .model_loader import (
+        get_decision_threshold,
+        get_explainer,
+        get_feature_label,
+        get_graph_signal_label,
+        get_model,
+    )
     from .schemas import (
         BorrowerInput,
         BorrowerListResponse,
@@ -41,7 +47,13 @@ except ImportError:
         determine_cold_start_phase,
         determine_cold_start_phase_existing,
     )
-    from model_loader import get_decision_threshold, get_explainer, get_feature_label, get_model
+    from model_loader import (
+        get_decision_threshold,
+        get_explainer,
+        get_feature_label,
+        get_graph_signal_label,
+        get_model,
+    )
     from schemas import (
         BorrowerInput,
         BorrowerListResponse,
@@ -174,10 +186,7 @@ def _align_to_model_features(raw_input: pd.DataFrame) -> pd.DataFrame:
         return raw_input.astype(float)
 
     x = raw_input.copy()
-    for col in model_features:
-        if col not in x.columns:
-            x[col] = 0.0
-    return x[model_features].astype(float)
+    return x.reindex(columns=model_features, fill_value=0.0).astype(float)
 
 
 def _build_model_input(feature_df: pd.DataFrame, phase: int) -> pd.DataFrame:
@@ -192,18 +201,18 @@ def _build_model_input(feature_df: pd.DataFrame, phase: int) -> pd.DataFrame:
     return _align_to_model_features(x)
 
 
-def _build_explanation_sentence(top_drivers: list[TopDriver]) -> str:
-    if not top_drivers:
+def _build_explanation_sentence(tabular_drivers: list[TopDriver]) -> str:
+    if not tabular_drivers:
         return "No dominant risk drivers were identified for this prediction."
 
-    if len(top_drivers) == 1:
-        d1 = top_drivers[0]
+    if len(tabular_drivers) == 1:
+        d1 = tabular_drivers[0]
         return (
             f"Primary factor: {d1.feature} {d1.direction} "
             f"(SHAP {d1.shap_contribution:+.4f})."
         )
 
-    d1, d2 = top_drivers[0], top_drivers[1]
+    d1, d2 = tabular_drivers[0], tabular_drivers[1]
     return (
         f"Primary factors: {d1.feature} {d1.direction} (SHAP {d1.shap_contribution:+.4f}) "
         f"and {d2.feature} {d2.direction} (SHAP {d2.shap_contribution:+.4f})."
@@ -221,18 +230,24 @@ def _score_model_input(model_input: pd.DataFrame) -> tuple[float, list[TopDriver
 
     contrib = pd.DataFrame(
         {
-            "feature": model_input.columns,
+            "feature": [str(col) for col in model_input.columns],
             "value": model_input.iloc[0].to_numpy(dtype=float),
             "shap_contribution": np.asarray(shap_vector, dtype=float),
         }
     )
-    contrib["abs_shap"] = contrib["shap_contribution"].abs()
-    top5 = contrib.sort_values("abs_shap", ascending=False).head(5)
+    contrib["is_graph_embedding"] = contrib["feature"].str.startswith("emb_")
 
-    top_drivers: list[TopDriver] = []
-    for _, row in top5.iterrows():
+    tabular_contrib = contrib.loc[~contrib["is_graph_embedding"]].copy()
+    tabular_contrib["abs_shap"] = tabular_contrib["shap_contribution"].abs()
+    top5_tabular = tabular_contrib.sort_values("abs_shap", ascending=False).head(5)
+
+    graph_contrib = contrib.loc[contrib["is_graph_embedding"]]
+    graph_total = float(graph_contrib["shap_contribution"].sum()) if not graph_contrib.empty else 0.0
+
+    tabular_drivers: list[TopDriver] = []
+    for _, row in top5_tabular.iterrows():
         direction = "increased risk" if float(row["shap_contribution"]) >= 0 else "reduced risk"
-        top_drivers.append(
+        tabular_drivers.append(
             TopDriver(
                 feature=get_feature_label(str(row["feature"])),
                 value=float(row["value"]),
@@ -241,7 +256,30 @@ def _score_model_input(model_input: pd.DataFrame) -> tuple[float, list[TopDriver
             )
         )
 
-    explanation = _build_explanation_sentence(top_drivers)
+    top_drivers = sorted(
+        tabular_drivers,
+        key=lambda d: abs(float(d.shap_contribution)),
+        reverse=True,
+    )
+
+    if abs(graph_total) > 0.05:
+        graph_direction = "increased risk" if graph_total >= 0 else "reduced risk"
+        top_drivers.append(
+            TopDriver(
+                feature=get_graph_signal_label(),
+                value=None,
+                shap_contribution=graph_total,
+                direction=graph_direction,
+            )
+        )
+
+    top_drivers = sorted(
+        top_drivers,
+        key=lambda d: abs(float(d.shap_contribution)),
+        reverse=True,
+    )[:6]
+
+    explanation = _build_explanation_sentence(tabular_drivers)
     return risk_score, top_drivers, explanation
 
 

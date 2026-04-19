@@ -45,7 +45,7 @@ class BorrowerInput(BaseModel):
 
 class TopDriver(BaseModel):
     feature: str
-    value: float
+    value: Optional[float] = None
     shap_contribution: float
     direction: Literal["increased risk", "reduced risk"]
 
@@ -134,7 +134,7 @@ class BorrowerProfile(BaseModel):
     neighborhood_default_rate_1hop: float
     neighborhood_default_rate_2hop: float
     pagerank_score: float
-    community_membership_flag: int
+    community_id: int
 
     # Ground truth
     default_flag: int

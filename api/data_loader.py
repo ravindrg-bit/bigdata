@@ -157,6 +157,7 @@ def load_borrower_profiles() -> pd.DataFrame:
 
     graph_features = FEATURES_TABLE[GRAPH_FEATURE_COLUMNS].copy()
     borrowers = borrowers.merge(graph_features, on="borrower_id", how="left")
+    borrowers = borrowers.rename(columns={"community_membership_flag": "community_id"})
 
     borrowers["default_flag"] = borrowers["default_flag"].fillna(0)
     borrowers["product_types"] = borrowers["product_types"].fillna("")
@@ -194,7 +195,7 @@ def load_borrower_profiles() -> pd.DataFrame:
         "neighborhood_default_rate_1hop",
         "neighborhood_default_rate_2hop",
         "pagerank_score",
-        "community_membership_flag",
+        "community_id",
     ]
     for col in fill_zero_columns:
         borrowers[col] = borrowers[col].fillna(0)

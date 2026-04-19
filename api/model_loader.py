@@ -14,44 +14,60 @@ THRESHOLD_PATH = ROOT / "models" / "hybrid_ensemble.threshold.json"
 
 FEATURE_LABELS = {
     "borrower_id": "Borrower ID",
-    "group_id": "Group ID",
-    "prior_CMR_usage": "Prior CMR usage",
+    "group_id": "Lending group ID",
+    "prior_CMR_usage": "Prior store credit usage",
     "store_visit_count": "Falabella store visits",
     "CoDi_wallet_flag": "CoDi wallet active",
     "INE_verified_flag": "INE identity verified",
-    "rural_flag": "Rural residence",
-    "indigenous_proxy": "Indigenous proxy",
-    "age": "Borrower age",
-    "cycle_number": "Group lending cycle",
+    "rural_flag": "Rural location",
+    "indigenous_proxy": "Indigenous community",
+    "age": "Age",
+    "cycle_number": "Lending group cycle",
     "cohesion_score": "Group cohesion",
-    "loan_count": "Loan count",
+    "loan_count": "Number of loans",
     "avg_loan_amount_MXN": "Average loan amount",
     "max_loan_amount_MXN": "Maximum loan amount",
+    "avg_loan_amount": "Average loan amount",
+    "max_loan_amount": "Maximum loan amount",
+    "total_loan_amount": "Total loan amount",
+    "CMR_credit_line_share": "CMR credit line share",
+    "OXXO_cash_backed_share": "OXXO cash-backed share",
     "cmr_credit_line_share": "CMR credit line share",
     "oxxo_cash_backed_share": "OXXO cash-backed share",
-    "repayment_latency_days": "Repayment latency",
-    "on_time_repayment_share": "On-time repayment history",
+    "repayment_latency_days": "Average repayment delay (days)",
+    "mean_repayment_latency": "Average repayment delay (days)",
+    "on_time_repayment_share": "On-time repayment rate",
+    "worst_latency": "Worst repayment delay (days)",
+    "total_repayments": "Number of repayments",
+    "call_volume": "Monthly call volume",
     "routine_score": "Call routine consistency",
+    "call_routine_score": "Call routine consistency",
     "messaging_frequency": "Messaging frequency",
     "call_volume_stability": "Call volume stability",
-    "app_opens": "App opens",
+    "weekly_call_cv": "Call volume stability",
+    "app_opens": "App opens per month",
     "location_variance": "Location variance",
-    "Falabella_app_session_flag": "Falabella app active",
-    "routine_entropy": "Behavioral entropy",
+    "Falabella_app_session_flag": "Falabella app user",
+    "routine_entropy": "Daily routine predictability",
     "CoDi_transaction_regularity": "CoDi transaction regularity",
-    "falabella_app_session_recency": "Falabella app session recency",
-    "degree_centrality": "Network connections",
-    "weighted_tie_strength": "Peer tie strength",
+    "codi_txn_regularity": "CoDi transaction regularity",
+    "falabella_app_session_recency": "Days since last app session",
+    "app_session_recency_days": "Days since last app session",
+    "degree_centrality": "Network connections (centrality)",
+    "weighted_tie_strength": "Social tie strength",
     "betweenness_centrality": "Network broker position",
     "neighborhood_default_rate_1hop": "Neighbour default rate",
-    "neighborhood_default_rate_2hop": "Second-hop neighbour default rate",
+    "neighborhood_default_rate_2hop": "Extended network default rate",
     "pagerank_score": "Social network influence",
-    "community_membership_flag": "Community member flag",
+    "community_membership_flag": "Community cluster ID",
+    "community_id": "Community cluster ID",
     "default_flag": "Observed default flag",
-    "sequential_lending_flag": "Sequential lending flag",
+    "sequential_lending_flag": "Sequential lending active",
     "peer_default_contagion_score": "Peer default contagion",
-    "gender_female_flag": "Female borrower flag",
+    "gender_female_flag": "Gender (female)",
 }
+
+GRAPH_SIGNAL_LABEL = "Social network position (graph analysis)"
 
 
 if not MODEL_PATH.exists():
@@ -84,3 +100,7 @@ def get_feature_label(feature_name: str) -> str:
     if feature_name.startswith("emb_"):
         return f"Graph embedding {feature_name.split('_', 1)[1]}"
     return feature_name.replace("_", " ").title()
+
+
+def get_graph_signal_label() -> str:
+    return GRAPH_SIGNAL_LABEL
