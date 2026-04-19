@@ -30,6 +30,8 @@ try:
         TopDriver,
     )
 except ImportError:
+    if __package__:
+        raise
     # Supports local invocation from the api/ directory: uvicorn main:app
     from data_loader import BORROWER_ID_LIST, BORROWER_PROFILES, EMBEDDINGS_TABLE, FEATURES_TABLE
     from feature_builder import (

@@ -1,0 +1,4 @@
+archive/
+mlruns/
+notebooks/
+__pycache__/
