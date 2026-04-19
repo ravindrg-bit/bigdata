@@ -21,6 +21,15 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 
+LEAKY_FEATURES = {
+    "repayment_latency_days",
+    "on_time_repayment_share",
+    "neighborhood_default_rate_1hop",
+    "neighborhood_default_rate_2hop",
+    "peer_default_contagion_score",
+}
+
+
 def evaluate_model(model, x_test: pd.DataFrame, y_test: pd.Series, threshold: float = 0.5) -> dict[str, float]:
     start = perf_counter()
     y_proba = model.predict_proba(x_test)[:, 1]
@@ -46,9 +55,16 @@ def select_f1_threshold(y_true: pd.Series, y_proba: np.ndarray) -> tuple[float, 
     return float(thresholds[idx]), float(f1_scores[idx])
 
 
-def evaluate_stage(name: str, model, x_test: pd.DataFrame, y_test: pd.Series) -> tuple[dict[str, float], np.ndarray]:
-    y_proba = model.predict_proba(x_test)[:, 1]
-    threshold, best_f1 = select_f1_threshold(y_test, y_proba)
+def evaluate_stage(
+    name: str,
+    model,
+    x_val: pd.DataFrame,
+    y_val: pd.Series,
+    x_test: pd.DataFrame,
+    y_test: pd.Series,
+) -> dict[str, float]:
+    val_proba = model.predict_proba(x_val)[:, 1]
+    threshold, val_best_f1 = select_f1_threshold(y_val, val_proba)
 
     metrics_default = evaluate_model(model, x_test, y_test, threshold=0.5)
     metrics_best = evaluate_model(model, x_test, y_test, threshold=threshold)
@@ -56,8 +72,9 @@ def evaluate_stage(name: str, model, x_test: pd.DataFrame, y_test: pd.Series) ->
     print(f"\n{name}:")
     print(f"  AUC: {metrics_default['auc']:.4f}")
     print(f"  F1@0.5: {metrics_default['f1']:.4f}")
-    print(f"  best_threshold(test): {threshold:.4f}")
-    print(f"  F1@best_threshold: {best_f1:.4f}")
+    print(f"  best_threshold(val): {threshold:.4f}")
+    print(f"  Val F1@best_threshold: {val_best_f1:.4f}")
+    print(f"  Test F1@best_threshold: {metrics_best['f1']:.4f}")
 
     out = {
         "auc": metrics_default["auc"],
@@ -66,9 +83,10 @@ def evaluate_stage(name: str, model, x_test: pd.DataFrame, y_test: pd.Series) ->
         "latency_ms_per_row": metrics_default["latency_ms_per_row"],
         "f1_default": metrics_default["f1"],
         "f1_best": metrics_best["f1"],
+        "val_f1_best": val_best_f1,
         "best_threshold": threshold,
     }
-    return out, y_proba
+    return out
 
 
 def run_training(
@@ -77,12 +95,23 @@ def run_training(
     random_state: int,
     mlflow_uri: str | None,
     experiment_name: str,
+    drop_leaky_features: bool,
 ) -> None:
     df = pd.read_parquet(feature_path)
     if "default_flag" not in df.columns:
         raise ValueError("features.parquet must include default_flag column")
 
     x = df.drop(columns=["default_flag", "borrower_id"], errors="ignore")
+    excluded_cols: list[str] = []
+    if drop_leaky_features:
+        excluded_cols = [col for col in x.columns if col in LEAKY_FEATURES]
+        if excluded_cols:
+            x = x.drop(columns=excluded_cols)
+
+    if excluded_cols:
+        print("Excluded potential leakage features:", ", ".join(sorted(excluded_cols)))
+    print(f"Using {x.shape[1]} tabular features for XGBoost")
+
     y = df["default_flag"].astype(int)
 
     x_train, x_temp, y_train, y_temp = train_test_split(
@@ -121,7 +150,7 @@ def run_training(
         # Step 1: Base model + threshold optimization on holdout predictions.
         xgb_base = XGBClassifier(**base_params)
         xgb_base.fit(x_train, y_train, eval_set=[(x_val, y_val)], verbose=False)
-        step1_metrics, _ = evaluate_stage("Step 1 (base)", xgb_base, x_test, y_test)
+        step1_metrics = evaluate_stage("Step 1 (base)", xgb_base, x_val, y_val, x_test, y_test)
 
         # Step 2: scale_pos_weight using train-set class ratio.
         neg = int((y_train == 0).sum())
@@ -130,7 +159,9 @@ def run_training(
 
         xgb_spw = XGBClassifier(**base_params, scale_pos_weight=scale_pos_weight)
         xgb_spw.fit(x_train, y_train, eval_set=[(x_val, y_val)], verbose=False)
-        step2_metrics, _ = evaluate_stage("Step 2 (scale_pos_weight)", xgb_spw, x_test, y_test)
+        step2_metrics = evaluate_stage(
+            "Step 2 (scale_pos_weight)", xgb_spw, x_val, y_val, x_test, y_test
+        )
 
         # Step 3: RandomizedSearchCV on train set, scoring=f1.
         search_space = {
@@ -160,7 +191,9 @@ def run_training(
         )
         random_search.fit(x_train, y_train)
         xgb_search = random_search.best_estimator_
-        step3_metrics, _ = evaluate_stage("Step 3 (randomized search)", xgb_search, x_test, y_test)
+        step3_metrics = evaluate_stage(
+            "Step 3 (randomized search)", xgb_search, x_val, y_val, x_test, y_test
+        )
 
         # Step 4: SMOTE on train only, retrain with best-search params.
         smote = SMOTE(random_state=random_state)
@@ -175,7 +208,9 @@ def run_training(
             scale_pos_weight=1.0,
         )
         xgb_smote.fit(x_train_smote, y_train_smote)
-        step4_metrics, _ = evaluate_stage("Step 4 (SMOTE + retrain)", xgb_smote, x_test, y_test)
+        step4_metrics = evaluate_stage(
+            "Step 4 (SMOTE + retrain)", xgb_smote, x_val, y_val, x_test, y_test
+        )
 
         stage_metrics = {
             "step1_base": step1_metrics,
@@ -184,9 +219,8 @@ def run_training(
             "step4_smote": step4_metrics,
         }
 
-        best_stage_name, best_stage = max(
-            stage_metrics.items(), key=lambda item: item[1]["f1_best"]
-        )
+        # Select stage based on validation F1 only; keep test set untouched for final reporting.
+        best_stage_name, best_stage = max(stage_metrics.items(), key=lambda item: item[1]["val_f1_best"])
 
         model_by_stage = {
             "step1_base": xgb_base,
@@ -211,6 +245,7 @@ def run_training(
                 "random_search_best_params": json.dumps(random_search.best_params_),
                 "selected_stage": best_stage_name,
                 "selected_threshold": float(best_stage["best_threshold"]),
+                "drop_leaky_features": bool(drop_leaky_features),
             }
         )
 
@@ -223,6 +258,7 @@ def run_training(
                     f"{stage_name}_latency_ms_per_row": float(metrics["latency_ms_per_row"]),
                     f"{stage_name}_f1_default": float(metrics["f1_default"]),
                     f"{stage_name}_f1_best": float(metrics["f1_best"]),
+                    f"{stage_name}_val_f1_best": float(metrics["val_f1_best"]),
                 }
             )
 
@@ -237,6 +273,8 @@ def run_training(
                     "selected_stage": best_stage_name,
                     "decision_threshold": best_stage["best_threshold"],
                     "f1_at_best_threshold": best_stage["f1_best"],
+                    "val_f1_at_best_threshold": best_stage["val_f1_best"],
+                    "excluded_features": sorted(excluded_cols),
                     "stage_metrics": stage_metrics,
                 },
                 indent=2,
@@ -287,6 +325,11 @@ def parse_args() -> argparse.Namespace:
         default="falabella_baseline",
         help="MLflow experiment name.",
     )
+    parser.add_argument(
+        "--allow-leaky-features",
+        action="store_true",
+        help="Include known leakage-prone features (not recommended).",
+    )
     return parser.parse_args()
 
 
@@ -298,6 +341,7 @@ def main() -> None:
         random_state=args.seed,
         mlflow_uri=args.mlflow_uri if args.mlflow_uri else None,
         experiment_name=args.experiment,
+        drop_leaky_features=not args.allow_leaky_features,
     )
 
 

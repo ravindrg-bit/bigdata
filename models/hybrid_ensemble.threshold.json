@@ -1,0 +1,25 @@
+{
+  "decision_threshold": 0.1624409705400467,
+  "validation_best_f1": 0.35713461760255044,
+  "excluded_features": [
+    "neighborhood_default_rate_1hop",
+    "neighborhood_default_rate_2hop",
+    "on_time_repayment_share",
+    "peer_default_contagion_score",
+    "repayment_latency_days"
+  ],
+  "default_metrics": {
+    "auc": 0.6405963233745524,
+    "pr_auc": 0.2879397256140111,
+    "f1": 0.05743112145906092,
+    "brier": 0.14164599776268005,
+    "latency_ms_per_row": 0.004985571045566488
+  },
+  "calibrated_metrics": {
+    "auc": 0.6405963233745524,
+    "pr_auc": 0.2879397256140111,
+    "f1": 0.34805797101449276,
+    "brier": 0.14164599776268005,
+    "latency_ms_per_row": 0.0020980617652336755
+  }
+}

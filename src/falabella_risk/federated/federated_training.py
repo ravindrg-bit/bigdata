@@ -13,15 +13,25 @@ from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_s
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+CITY_TO_CLIENT = {
+    "Ciudad de México": "CDMX",
+    "Mérida": "Mérida",
+    "Monterrey": "Monterrey",
+    "Guadalajara": "Guadalajara",
+}
+
 
 def set_seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
 
 
-def assign_regions(borrower_ids: np.ndarray) -> np.ndarray:
-    regions = np.array(["CDMX", "Monterrey", "Guadalajara", "Yucatan"])
-    return regions[borrower_ids.astype(np.int64) % len(regions)]
+def assign_regions_from_city(city_series: pd.Series) -> np.ndarray:
+    mapped = city_series.map(CITY_TO_CLIENT)
+    if mapped.isna().any():
+        missing = city_series[mapped.isna()].astype(str).unique().tolist()
+        raise ValueError(f"Unsupported city values for federated partitioning: {missing}")
+    return mapped.to_numpy()
 
 
 class BinaryLinear(torch.nn.Module):
@@ -45,17 +55,33 @@ class DatasetBundle:
     feature_columns: list[str]
     scaler_mean: np.ndarray
     scaler_scale: np.ndarray
+    region_counts_full: dict[str, int]
+    region_counts_train: dict[str, int]
 
 
-def prepare_dataset(features_path: Path, seed: int) -> DatasetBundle:
+def prepare_dataset(features_path: Path, seed: int, borrowers_path: Path) -> DatasetBundle:
     df = pd.read_parquet(features_path)
     if "borrower_id" not in df.columns or "default_flag" not in df.columns:
         raise ValueError("features.parquet must include borrower_id and default_flag")
 
-    y = df["default_flag"].astype(int).to_numpy()
-    regions = assign_regions(df["borrower_id"].to_numpy())
+    borrowers = pd.read_parquet(borrowers_path)
+    if "borrower_id" not in borrowers.columns or "city" not in borrowers.columns:
+        raise ValueError("borrowers.parquet must include borrower_id and city")
 
-    x = df.drop(columns=["default_flag", "borrower_id"], errors="ignore").copy()
+    borrower_city = borrowers[["borrower_id", "city"]].copy()
+    borrower_city = borrower_city[borrower_city["city"].isin(CITY_TO_CLIENT.keys())]
+
+    df = df.merge(borrower_city, on="borrower_id", how="inner")
+    if df.empty:
+        raise RuntimeError("No rows available after filtering to federated client cities.")
+
+    y = df["default_flag"].astype(int).to_numpy()
+    regions = assign_regions_from_city(df["city"])
+    region_counts_full = {
+        region: int((regions == region).sum()) for region in CITY_TO_CLIENT.values()
+    }
+
+    x = df.drop(columns=["default_flag", "borrower_id", "city"], errors="ignore").copy()
     x = x.apply(pd.to_numeric, errors="coerce").fillna(0.0)
 
     feature_columns = x.columns.tolist()
@@ -81,6 +107,11 @@ def prepare_dataset(features_path: Path, seed: int) -> DatasetBundle:
     x_val = scaler.transform(x.iloc[idx_val].to_numpy(dtype=np.float32)).astype(np.float32)
     x_test = scaler.transform(x.iloc[idx_test].to_numpy(dtype=np.float32)).astype(np.float32)
 
+    regions_train = regions[idx_train]
+    region_counts_train = {
+        region: int((regions_train == region).sum()) for region in CITY_TO_CLIENT.values()
+    }
+
     return DatasetBundle(
         x_train=x_train,
         y_train=y[idx_train].astype(np.float32),
@@ -88,10 +119,12 @@ def prepare_dataset(features_path: Path, seed: int) -> DatasetBundle:
         y_val=y[idx_val].astype(np.float32),
         x_test=x_test,
         y_test=y[idx_test].astype(np.float32),
-        regions_train=regions[idx_train],
+        regions_train=regions_train,
         feature_columns=feature_columns,
         scaler_mean=scaler.mean_.astype(np.float32),
         scaler_scale=scaler.scale_.astype(np.float32),
+        region_counts_full=region_counts_full,
+        region_counts_train=region_counts_train,
     )
 
 
@@ -204,6 +237,7 @@ def train_centralized_reference(
 
 def train_federated(
     features_path: Path,
+    borrowers_path: Path,
     model_out: Path,
     report_out: Path,
     seed: int,
@@ -212,16 +246,20 @@ def train_federated(
     learning_rate: float,
 ) -> dict[str, object]:
     set_seed(seed)
-    data = prepare_dataset(features_path, seed=seed)
+    data = prepare_dataset(features_path, seed=seed, borrowers_path=borrowers_path)
 
-    regions = sorted(np.unique(data.regions_train).tolist())
+    regions = [region for region in CITY_TO_CLIENT.values() if region in data.region_counts_train]
     region_masks = {region: (data.regions_train == region) for region in regions}
+
+    print("Federated client counts (full selected dataset):", data.region_counts_full)
+    print("Federated client counts (train split):", data.region_counts_train)
 
     global_model = BinaryLinear(in_features=data.x_train.shape[1])
     global_state = {k: v.detach().clone() for k, v in global_model.state_dict().items()}
 
     best_state = None
     best_val_auc = -1.0
+    round_history: list[dict[str, float | int]] = []
 
     for round_idx in range(1, rounds + 1):
         client_states: list[dict[str, torch.Tensor]] = []
@@ -248,6 +286,16 @@ def train_federated(
         if val_metrics["auc"] > best_val_auc:
             best_val_auc = val_metrics["auc"]
             best_state = {k: v.detach().clone() for k, v in global_state.items()}
+
+        round_history.append(
+            {
+                "round": int(round_idx),
+                "val_auc": float(val_metrics["auc"]),
+                "val_pr_auc": float(val_metrics["pr_auc"]),
+                "val_brier": float(val_metrics["brier"]),
+                "val_accuracy": float(val_metrics["accuracy"]),
+            }
+        )
 
         print(
             f"Round {round_idx:02d} | val_auc={val_metrics['auc']:.4f} "
@@ -276,10 +324,14 @@ def train_federated(
         "centralized_epochs": centralized_epochs,
         "learning_rate": learning_rate,
         "dataset": {
+            "in_features": int(data.x_train.shape[1]),
             "train_rows": int(len(data.x_train)),
             "val_rows": int(len(data.x_val)),
             "test_rows": int(len(data.x_test)),
+            "client_rows_full": data.region_counts_full,
+            "client_rows_train": data.region_counts_train,
         },
+        "round_history": round_history,
         "federated_metrics": fed_metrics,
         "centralized_metrics": centralized_metrics,
         "auc_gap_vs_centralized": float(centralized_metrics["auc"] - fed_metrics["auc"]),
@@ -359,6 +411,12 @@ def parse_args() -> argparse.Namespace:
         help="Path to features parquet.",
     )
     parser.add_argument(
+        "--borrowers",
+        type=Path,
+        default=Path("data/raw/borrowers.parquet"),
+        help="Path to borrowers parquet for regional client partitioning.",
+    )
+    parser.add_argument(
         "--model-out",
         type=Path,
         default=Path("models/federated_model.pt"),
@@ -381,6 +439,7 @@ def main() -> None:
     args = parse_args()
     train_federated(
         features_path=args.features,
+        borrowers_path=args.borrowers,
         model_out=args.model_out,
         report_out=args.report_out,
         seed=args.seed,

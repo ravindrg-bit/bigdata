@@ -1,0 +1,20 @@
+{
+  "hidden_channels": 256,
+  "dropout": 0.2,
+  "weight_decay": 0.0005,
+  "learning_rate": 0.0015,
+  "epochs_requested": 60,
+  "early_stopping_patience": 10,
+  "best_epoch": 46,
+  "best_val_auc": 0.6359767721192051,
+  "test_auc": 0.6518190094113229,
+  "test_pr_auc": 0.2934207342767561,
+  "feature_count": 31,
+  "excluded_features": [
+    "neighborhood_default_rate_1hop",
+    "neighborhood_default_rate_2hop",
+    "on_time_repayment_share",
+    "peer_default_contagion_score",
+    "repayment_latency_days"
+  ]
+}

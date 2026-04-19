@@ -26,6 +26,8 @@ st.caption("MVP implementation: portfolio analytics and borrower lookup are acti
 features_path = Path("data/processed/features.parquet")
 month2_model_path = Path("models/baseline_xgb.pkl")
 month3_model_path = Path("models/hybrid_ensemble.pkl")
+month2_threshold_path = Path("models/baseline_xgb.threshold.json")
+month3_threshold_path = Path("models/hybrid_ensemble.threshold.json")
 embeddings_path = Path("data/processed/gnn_embeddings.parquet")
 edges_path = Path("data/raw/edges.parquet")
 federated_model_path = Path("models/federated_model.pt")
@@ -69,6 +71,9 @@ try:
     scorer = ColdStartScorer(
         month2_model_path=month2_model_path if month2_model_path.exists() else None,
         month3_model_path=month3_model_path if month3_model_path.exists() else None,
+        month2_threshold_path=month2_threshold_path if month2_threshold_path.exists() else None,
+        month3_threshold_path=month3_threshold_path if month3_threshold_path.exists() else None,
+        embeddings_path=embeddings_path if embeddings_path.exists() else None,
     )
 except Exception:
     scorer = ColdStartScorer(month2_model_path=None, month3_model_path=None)
@@ -76,10 +81,15 @@ except Exception:
 explain_engine = None
 if month3_model_path.exists():
     try:
+        month3_threshold = 0.5
+        if month3_threshold_path.exists():
+            payload = json.loads(month3_threshold_path.read_text())
+            month3_threshold = float(payload.get("decision_threshold", 0.5))
+
         explain_engine = ExplainabilityEngine(
             model_path=month3_model_path,
             embeddings_path=embeddings_path if embeddings_path.exists() else None,
-            threshold=0.5,
+            threshold=month3_threshold,
         )
     except Exception:
         explain_engine = None

@@ -1,43 +1,55 @@
 {
-  "selected_stage": "step2_scale_pos_weight",
-  "decision_threshold": 0.6113401651382446,
-  "f1_at_best_threshold": 0.5920564216778025,
+  "selected_stage": "step3_randomized_search",
+  "decision_threshold": 0.5174815654754639,
+  "f1_at_best_threshold": 0.3404019404019404,
+  "val_f1_at_best_threshold": 0.3609125893343552,
+  "excluded_features": [
+    "neighborhood_default_rate_1hop",
+    "neighborhood_default_rate_2hop",
+    "on_time_repayment_share",
+    "peer_default_contagion_score",
+    "repayment_latency_days"
+  ],
   "stage_metrics": {
     "step1_base": {
-      "auc": 0.8641095069583811,
-      "pr_auc": 0.635866156999081,
-      "brier": 0.09921147674322128,
-      "latency_ms_per_row": 0.0014830710435355151,
-      "f1_default": 0.5430730478589421,
-      "f1_best": 0.5907868793690626,
-      "best_threshold": 0.2577803134918213
+      "auc": 0.6318066274730998,
+      "pr_auc": 0.2796297501341847,
+      "brier": 0.14205144345760345,
+      "latency_ms_per_row": 0.0008052715652242854,
+      "f1_default": 0.04033214709371293,
+      "f1_best": 0.3429464071136746,
+      "val_f1_best": 0.3503632249608853,
+      "best_threshold": 0.17196564376354218
     },
     "step2_scale_pos_weight": {
-      "auc": 0.8637539627068695,
-      "pr_auc": 0.6334946661849281,
-      "brier": 0.13971467316150665,
-      "latency_ms_per_row": 0.0015668672578478301,
-      "f1_default": 0.5721984466634966,
-      "f1_best": 0.5920564216778025,
-      "best_threshold": 0.6113401651382446
+      "auc": 0.6288976070210939,
+      "pr_auc": 0.27689471439072344,
+      "brier": 0.2192203253507614,
+      "latency_ms_per_row": 0.0008404444454720726,
+      "f1_default": 0.33571929824561403,
+      "f1_best": 0.3387387387387387,
+      "val_f1_best": 0.3500777950651767,
+      "best_threshold": 0.4498540163040161
     },
     "step3_randomized_search": {
-      "auc": 0.8620331344947493,
-      "pr_auc": 0.630852490674918,
-      "brier": 0.13240456581115723,
-      "latency_ms_per_row": 0.0008536944407279845,
-      "f1_default": 0.5795904887714664,
-      "f1_best": 0.590063233965673,
-      "best_threshold": 0.5605119466781616
+      "auc": 0.6361288398564788,
+      "pr_auc": 0.28697480160920963,
+      "brier": 0.23285646736621857,
+      "latency_ms_per_row": 0.000330740741143624,
+      "f1_default": 0.3415245737211635,
+      "f1_best": 0.3404019404019404,
+      "val_f1_best": 0.3609125893343552,
+      "best_threshold": 0.5174815654754639
     },
     "step4_smote": {
-      "auc": 0.8629633320593915,
-      "pr_auc": 0.6322922149355713,
-      "brier": 0.09958282113075256,
-      "latency_ms_per_row": 0.001005163554240156,
-      "f1_default": 0.5453190961013161,
-      "f1_best": 0.5913385826771653,
-      "best_threshold": 0.32065197825431824
+      "auc": 0.6092142910110592,
+      "pr_auc": 0.2641368885458623,
+      "brier": 0.15203309059143066,
+      "latency_ms_per_row": 0.0002488333352462009,
+      "f1_default": 0.02650602409638554,
+      "f1_best": 0.3296003772250383,
+      "val_f1_best": 0.34026375193020675,
+      "best_threshold": 0.27526119351387024
     }
   }
 }
