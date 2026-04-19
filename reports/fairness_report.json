@@ -1,82 +1,82 @@
 {
-  "created_at_utc": "2026-04-13T15:50:03.408704+00:00",
+  "created_at_utc": "2026-04-19T15:08:52.468547+00:00",
   "seed": 42,
   "dataset": {
-    "total_rows": 15000,
-    "train_rows": 10500,
-    "val_rows": 2250,
-    "test_rows": 2250,
-    "default_rate_test": 0.17822222222222223
+    "total_rows": 90000,
+    "train_rows": 63000,
+    "val_rows": 13500,
+    "test_rows": 13500,
+    "default_rate_test": 0.17933333333333334
   },
   "baseline": {
     "classification_metrics": {
-      "auc": 0.9816953020369573,
-      "pr_auc": 0.9263164404627238,
-      "f1": 0.8504326328800988,
-      "brier": 0.04219778131879094,
-      "positive_rate": 0.18133333333333335
+      "auc": 0.6405963233745524,
+      "pr_auc": 0.2879397256140111,
+      "f1": 0.05743112145906092,
+      "brier": 0.14164599776268005,
+      "positive_rate": 0.011555555555555555
     },
     "fairness": {
       "gender_female_flag": {
         "attribute": "gender_female_flag",
-        "demographic_parity_gap": 0.005134605098948142,
-        "equal_opportunity_gap": 0.061480927449513834,
+        "demographic_parity_gap": 0.0027008909028580757,
+        "equal_opportunity_gap": 0.004320770130223767,
         "groups": [
           {
             "group": 0,
-            "count": 1065,
-            "positive_rate": 0.18403755868544602,
-            "true_positive_rate": 0.8900523560209425,
-            "auc": 0.9856470221764291
+            "count": 4093,
+            "positive_rate": 0.013437576349865624,
+            "true_positive_rate": 0.03355704697986577,
+            "auc": 0.6318864112001155
           },
           {
             "group": 1,
-            "count": 1185,
-            "positive_rate": 0.17890295358649788,
-            "true_positive_rate": 0.8285714285714286,
-            "auc": 0.97801221001221
+            "count": 9407,
+            "positive_rate": 0.010736685447007548,
+            "true_positive_rate": 0.029236276849642005,
+            "auc": 0.6449101562102053
           }
         ]
       },
       "rural_flag": {
         "attribute": "rural_flag",
-        "demographic_parity_gap": 0.06559366253045748,
-        "equal_opportunity_gap": 0.020429292929292853,
+        "demographic_parity_gap": 0.035409415097359884,
+        "equal_opportunity_gap": 0.07851721573470233,
         "groups": [
           {
             "group": 0,
-            "count": 1499,
-            "positive_rate": 0.15943962641761175,
-            "true_positive_rate": 0.8488888888888889,
-            "auc": 0.9788871446014302
+            "count": 10729,
+            "positive_rate": 0.004287445241867835,
+            "true_positive_rate": 0.009096077316657191,
+            "auc": 0.6296647659464971
           },
           {
             "group": 1,
-            "count": 751,
-            "positive_rate": 0.22503328894806923,
-            "true_positive_rate": 0.8693181818181818,
-            "auc": 0.9861166007905138
+            "count": 2771,
+            "positive_rate": 0.039696860339227716,
+            "true_positive_rate": 0.08761329305135952,
+            "auc": 0.6374171118168573
           }
         ]
       },
       "indigenous_proxy": {
         "attribute": "indigenous_proxy",
-        "demographic_parity_gap": 0.06593028179828475,
-        "equal_opportunity_gap": 0.023418209876543195,
+        "demographic_parity_gap": 0.03857485781328164,
+        "equal_opportunity_gap": 0.07820310116224238,
         "groups": [
           {
             "group": 0,
-            "count": 1913,
-            "positive_rate": 0.17145844223732357,
-            "true_positive_rate": 0.853125,
-            "auc": 0.979386377903327
+            "count": 11096,
+            "positive_rate": 0.004686373467916366,
+            "true_positive_rate": 0.011475409836065573,
+            "auc": 0.6253861582210773
           },
           {
             "group": 1,
-            "count": 337,
-            "positive_rate": 0.23738872403560832,
-            "true_positive_rate": 0.8765432098765432,
-            "auc": 0.9907407407407407
+            "count": 2404,
+            "positive_rate": 0.04326123128119801,
+            "true_positive_rate": 0.08967851099830795,
+            "auc": 0.6489193015661471
           }
         ]
       }
@@ -86,88 +86,88 @@
     "strategy": "intersectional_threshold_calibration",
     "threshold_maps": {
       "gender_female_flag": {
-        "0": 0.5351442810694372,
-        "1": 0.4489975876808166
+        "0": 0.5111368298530579,
+        "1": 0.4919549524784088
       },
       "rural_flag": {
-        "0": 0.19135236616929366,
-        "1": 0.9316421151161194
+        "0": 0.4327099025249481,
+        "1": 0.6109986305236816
       },
       "indigenous_proxy": {
-        "0": 0.32313115477561793,
-        "1": 0.9607244548797608
+        "0": 0.42990174889564514,
+        "1": 0.6187312602996826
       }
     },
-    "threshold_min": 0.3211603695419094,
-    "threshold_max": 0.8091702836884392,
+    "threshold_min": 0.45152220129966736,
+    "threshold_max": 0.5802889068921407,
     "classification_metrics": {
-      "auc": 0.9816953020369573,
-      "pr_auc": 0.9263164404627238,
-      "f1": 0.8454882571075402,
-      "brier": 0.04219778131879094,
-      "positive_rate": 0.18133333333333335
+      "auc": 0.6405963233745524,
+      "pr_auc": 0.2879397256140111,
+      "f1": 0.04870384917517675,
+      "brier": 0.14164599776268005,
+      "positive_rate": 0.009259259259259259
     },
     "fairness": {
       "gender_female_flag": {
         "attribute": "gender_female_flag",
-        "demographic_parity_gap": 0.0015689071135674693,
-        "equal_opportunity_gap": 0.0410122164048865,
+        "demographic_parity_gap": 0.0010875818001113736,
+        "equal_opportunity_gap": 0.0017859717127708986,
         "groups": [
           {
             "group": 0,
-            "count": 1065,
-            "positive_rate": 0.18215962441314554,
-            "true_positive_rate": 0.8743455497382199,
-            "auc": 0.9856470221764291
+            "count": 4093,
+            "positive_rate": 0.01001710236989983,
+            "true_positive_rate": 0.026845637583892617,
+            "auc": 0.6318864112001155
           },
           {
             "group": 1,
-            "count": 1185,
-            "positive_rate": 0.18059071729957807,
-            "true_positive_rate": 0.8333333333333334,
-            "auc": 0.97801221001221
+            "count": 9407,
+            "positive_rate": 0.008929520569788456,
+            "true_positive_rate": 0.025059665871121718,
+            "auc": 0.6449101562102053
           }
         ]
       },
       "rural_flag": {
         "attribute": "rural_flag",
-        "demographic_parity_gap": 0.0456069692267104,
-        "equal_opportunity_gap": 0.021313131313131284,
+        "demographic_parity_gap": 0.017410829894417633,
+        "equal_opportunity_gap": 0.039599539013000035,
         "groups": [
           {
             "group": 0,
-            "count": 1499,
-            "positive_rate": 0.16611074049366245,
-            "true_positive_rate": 0.8622222222222222,
-            "auc": 0.9788871446014302
+            "count": 10729,
+            "positive_rate": 0.005685525212042129,
+            "true_positive_rate": 0.014781125639567936,
+            "auc": 0.6296647659464971
           },
           {
             "group": 1,
-            "count": 751,
-            "positive_rate": 0.21171770972037285,
-            "true_positive_rate": 0.8409090909090909,
-            "auc": 0.9861166007905138
+            "count": 2771,
+            "positive_rate": 0.02309635510645976,
+            "true_positive_rate": 0.054380664652567974,
+            "auc": 0.6374171118168573
           }
         ]
       },
       "indigenous_proxy": {
         "attribute": "indigenous_proxy",
-        "demographic_parity_gap": 0.04498969257663868,
-        "equal_opportunity_gap": 0.01674382716049383,
+        "demographic_parity_gap": 0.01656995610536153,
+        "equal_opportunity_gap": 0.03551357798674101,
         "groups": [
           {
             "group": 0,
-            "count": 1913,
-            "positive_rate": 0.174594877156299,
-            "true_positive_rate": 0.85625,
-            "auc": 0.979386377903327
+            "count": 11096,
+            "positive_rate": 0.006308579668348954,
+            "true_positive_rate": 0.016939890710382512,
+            "auc": 0.6253861582210773
           },
           {
             "group": 1,
-            "count": 337,
-            "positive_rate": 0.2195845697329377,
-            "true_positive_rate": 0.8395061728395061,
-            "auc": 0.9907407407407407
+            "count": 2404,
+            "positive_rate": 0.022878535773710483,
+            "true_positive_rate": 0.05245346869712352,
+            "auc": 0.6489193015661471
           }
         ]
       }
@@ -179,144 +179,116 @@
         {
           "bin_start": 0.0,
           "bin_end": 0.1,
-          "count": 829,
-          "mean_pred": 0.0034986762329936028,
-          "obs_default_rate": 0.014475271411338963
+          "count": 1153,
+          "mean_pred": 0.06410723924636841,
+          "obs_default_rate": 0.1049436253252385
         },
         {
           "bin_start": 0.1,
           "bin_end": 0.2,
-          "count": 16,
-          "mean_pred": 0.1530648171901703,
-          "obs_default_rate": 0.1875
+          "count": 1707,
+          "mean_pred": 0.14794820547103882,
+          "obs_default_rate": 0.1698886936145284
         },
         {
           "bin_start": 0.2,
           "bin_end": 0.30000000000000004,
-          "count": 10,
-          "mean_pred": 0.2521096467971802,
-          "obs_default_rate": 0.2
+          "count": 796,
+          "mean_pred": 0.24172437191009521,
+          "obs_default_rate": 0.2399497487437186
         },
         {
           "bin_start": 0.30000000000000004,
           "bin_end": 0.4,
-          "count": 8,
-          "mean_pred": 0.35314369201660156,
-          "obs_default_rate": 0.25
+          "count": 280,
+          "mean_pred": 0.34081536531448364,
+          "obs_default_rate": 0.2892857142857143
         },
         {
           "bin_start": 0.4,
           "bin_end": 0.5,
-          "count": 6,
-          "mean_pred": 0.4469163119792938,
-          "obs_default_rate": 0.3333333333333333
+          "count": 102,
+          "mean_pred": 0.44115641713142395,
+          "obs_default_rate": 0.3627450980392157
         },
         {
           "bin_start": 0.5,
           "bin_end": 0.6000000000000001,
-          "count": 5,
-          "mean_pred": 0.5515923500061035,
-          "obs_default_rate": 0.4
+          "count": 32,
+          "mean_pred": 0.5391805171966553,
+          "obs_default_rate": 0.375
         },
         {
           "bin_start": 0.6000000000000001,
           "bin_end": 0.7000000000000001,
-          "count": 7,
-          "mean_pred": 0.6488562226295471,
-          "obs_default_rate": 0.7142857142857143
+          "count": 17,
+          "mean_pred": 0.635994017124176,
+          "obs_default_rate": 0.5294117647058824
         },
         {
           "bin_start": 0.7000000000000001,
           "bin_end": 0.8,
-          "count": 12,
-          "mean_pred": 0.7386897206306458,
-          "obs_default_rate": 0.4166666666666667
-        },
-        {
-          "bin_start": 0.8,
-          "bin_end": 0.9,
-          "count": 17,
-          "mean_pred": 0.8677551746368408,
-          "obs_default_rate": 0.7647058823529411
-        },
-        {
-          "bin_start": 0.9,
-          "bin_end": 1.0,
-          "count": 155,
-          "mean_pred": 0.9860833883285522,
-          "obs_default_rate": 0.9354838709677419
+          "count": 6,
+          "mean_pred": 0.7630462050437927,
+          "obs_default_rate": 0.6666666666666666
         }
       ],
       "1": [
         {
           "bin_start": 0.0,
           "bin_end": 0.1,
-          "count": 919,
-          "mean_pred": 0.0031459718011319637,
-          "obs_default_rate": 0.02176278563656148
+          "count": 2316,
+          "mean_pred": 0.06861234456300735,
+          "obs_default_rate": 0.096286701208981
         },
         {
           "bin_start": 0.1,
           "bin_end": 0.2,
-          "count": 27,
-          "mean_pred": 0.15398727357387543,
-          "obs_default_rate": 0.3333333333333333
+          "count": 4125,
+          "mean_pred": 0.1473708599805832,
+          "obs_default_rate": 0.15927272727272726
         },
         {
           "bin_start": 0.2,
           "bin_end": 0.30000000000000004,
-          "count": 11,
-          "mean_pred": 0.25108474493026733,
-          "obs_default_rate": 0.09090909090909091
+          "count": 1994,
+          "mean_pred": 0.24073195457458496,
+          "obs_default_rate": 0.2246740220661986
         },
         {
           "bin_start": 0.30000000000000004,
           "bin_end": 0.4,
-          "count": 10,
-          "mean_pred": 0.3381079137325287,
-          "obs_default_rate": 0.4
+          "count": 649,
+          "mean_pred": 0.3412286639213562,
+          "obs_default_rate": 0.3204930662557781
         },
         {
           "bin_start": 0.4,
           "bin_end": 0.5,
-          "count": 6,
-          "mean_pred": 0.45617052912712097,
-          "obs_default_rate": 0.3333333333333333
+          "count": 222,
+          "mean_pred": 0.4401535391807556,
+          "obs_default_rate": 0.4099099099099099
         },
         {
           "bin_start": 0.5,
           "bin_end": 0.6000000000000001,
-          "count": 12,
-          "mean_pred": 0.5539870858192444,
-          "obs_default_rate": 0.3333333333333333
+          "count": 74,
+          "mean_pred": 0.543781578540802,
+          "obs_default_rate": 0.44594594594594594
         },
         {
           "bin_start": 0.6000000000000001,
           "bin_end": 0.7000000000000001,
-          "count": 9,
-          "mean_pred": 0.6521800756454468,
-          "obs_default_rate": 0.2222222222222222
+          "count": 25,
+          "mean_pred": 0.6433862447738647,
+          "obs_default_rate": 0.6
         },
         {
           "bin_start": 0.7000000000000001,
           "bin_end": 0.8,
-          "count": 4,
-          "mean_pred": 0.7454921007156372,
-          "obs_default_rate": 0.75
-        },
-        {
-          "bin_start": 0.8,
-          "bin_end": 0.9,
-          "count": 12,
-          "mean_pred": 0.8495429158210754,
+          "count": 2,
+          "mean_pred": 0.7493138313293457,
           "obs_default_rate": 0.5
-        },
-        {
-          "bin_start": 0.9,
-          "bin_end": 1.0,
-          "count": 175,
-          "mean_pred": 0.9852626323699951,
-          "obs_default_rate": 0.9085714285714286
         }
       ]
     },
@@ -325,144 +297,116 @@
         {
           "bin_start": 0.0,
           "bin_end": 0.1,
-          "count": 1205,
-          "mean_pred": 0.003344230353832245,
-          "obs_default_rate": 0.018257261410788383
+          "count": 3210,
+          "mean_pred": 0.06685949862003326,
+          "obs_default_rate": 0.09532710280373832
         },
         {
           "bin_start": 0.1,
           "bin_end": 0.2,
-          "count": 28,
-          "mean_pred": 0.1539311707019806,
-          "obs_default_rate": 0.2857142857142857
+          "count": 4917,
+          "mean_pred": 0.1463162899017334,
+          "obs_default_rate": 0.162294081757169
         },
         {
           "bin_start": 0.2,
           "bin_end": 0.30000000000000004,
-          "count": 10,
-          "mean_pred": 0.23864631354808807,
-          "obs_default_rate": 0.0
+          "count": 1933,
+          "mean_pred": 0.23874127864837646,
+          "obs_default_rate": 0.22090015519917228
         },
         {
           "bin_start": 0.30000000000000004,
           "bin_end": 0.4,
-          "count": 9,
-          "mean_pred": 0.3486107885837555,
-          "obs_default_rate": 0.2222222222222222
+          "count": 478,
+          "mean_pred": 0.3394767940044403,
+          "obs_default_rate": 0.3138075313807531
         },
         {
           "bin_start": 0.4,
           "bin_end": 0.5,
-          "count": 8,
-          "mean_pred": 0.45408207178115845,
-          "obs_default_rate": 0.25
+          "count": 145,
+          "mean_pred": 0.44116106629371643,
+          "obs_default_rate": 0.42758620689655175
         },
         {
           "bin_start": 0.5,
           "bin_end": 0.6000000000000001,
-          "count": 10,
-          "mean_pred": 0.5550996661186218,
-          "obs_default_rate": 0.3
+          "count": 32,
+          "mean_pred": 0.542589545249939,
+          "obs_default_rate": 0.25
         },
         {
           "bin_start": 0.6000000000000001,
           "bin_end": 0.7000000000000001,
-          "count": 13,
-          "mean_pred": 0.6510115265846252,
-          "obs_default_rate": 0.38461538461538464
+          "count": 11,
+          "mean_pred": 0.6290983557701111,
+          "obs_default_rate": 0.5454545454545454
         },
         {
           "bin_start": 0.7000000000000001,
           "bin_end": 0.8,
-          "count": 9,
-          "mean_pred": 0.7410640716552734,
-          "obs_default_rate": 0.4444444444444444
-        },
-        {
-          "bin_start": 0.8,
-          "bin_end": 0.9,
-          "count": 18,
-          "mean_pred": 0.8584729433059692,
+          "count": 3,
+          "mean_pred": 0.7627846598625183,
           "obs_default_rate": 0.6666666666666666
-        },
-        {
-          "bin_start": 0.9,
-          "bin_end": 1.0,
-          "count": 189,
-          "mean_pred": 0.9846806526184082,
-          "obs_default_rate": 0.8835978835978836
         }
       ],
       "1": [
         {
           "bin_start": 0.0,
           "bin_end": 0.1,
-          "count": 543,
-          "mean_pred": 0.0032444822136312723,
-          "obs_default_rate": 0.01841620626151013
+          "count": 259,
+          "mean_pred": 0.07028123736381531,
+          "obs_default_rate": 0.14671814671814673
         },
         {
           "bin_start": 0.1,
           "bin_end": 0.2,
-          "count": 15,
-          "mean_pred": 0.15310804545879364,
-          "obs_default_rate": 0.26666666666666666
+          "count": 915,
+          "mean_pred": 0.15411491692066193,
+          "obs_default_rate": 0.1628415300546448
         },
         {
           "bin_start": 0.2,
           "bin_end": 0.30000000000000004,
-          "count": 11,
-          "mean_pred": 0.26332414150238037,
-          "obs_default_rate": 0.2727272727272727
+          "count": 857,
+          "mean_pred": 0.24614381790161133,
+          "obs_default_rate": 0.24737456242707118
         },
         {
           "bin_start": 0.30000000000000004,
           "bin_end": 0.4,
-          "count": 9,
-          "mean_pred": 0.34097015857696533,
-          "obs_default_rate": 0.4444444444444444
+          "count": 451,
+          "mean_pred": 0.34282878041267395,
+          "obs_default_rate": 0.3082039911308204
         },
         {
           "bin_start": 0.4,
           "bin_end": 0.5,
-          "count": 4,
-          "mean_pred": 0.44646602869033813,
-          "obs_default_rate": 0.5
+          "count": 179,
+          "mean_pred": 0.439908891916275,
+          "obs_default_rate": 0.3687150837988827
         },
         {
           "bin_start": 0.5,
           "bin_end": 0.6000000000000001,
-          "count": 7,
-          "mean_pred": 0.5506871342658997,
-          "obs_default_rate": 0.42857142857142855
+          "count": 74,
+          "mean_pred": 0.5423074960708618,
+          "obs_default_rate": 0.5
         },
         {
           "bin_start": 0.6000000000000001,
           "bin_end": 0.7000000000000001,
-          "count": 3,
-          "mean_pred": 0.6494881510734558,
-          "obs_default_rate": 0.6666666666666666
+          "count": 31,
+          "mean_pred": 0.644402265548706,
+          "obs_default_rate": 0.5806451612903226
         },
         {
           "bin_start": 0.7000000000000001,
           "bin_end": 0.8,
-          "count": 7,
-          "mean_pred": 0.7395239472389221,
-          "obs_default_rate": 0.5714285714285714
-        },
-        {
-          "bin_start": 0.8,
-          "bin_end": 0.9,
-          "count": 11,
-          "mean_pred": 0.8630762696266174,
-          "obs_default_rate": 0.6363636363636364
-        },
-        {
-          "bin_start": 0.9,
-          "bin_end": 1.0,
-          "count": 141,
-          "mean_pred": 0.9869447350502014,
-          "obs_default_rate": 0.9716312056737588
+          "count": 5,
+          "mean_pred": 0.7577101588249207,
+          "obs_default_rate": 0.6
         }
       ]
     },
@@ -471,144 +415,116 @@
         {
           "bin_start": 0.0,
           "bin_end": 0.1,
-          "count": 1504,
-          "mean_pred": 0.0034941858612000942,
-          "obs_default_rate": 0.01928191489361702
+          "count": 3248,
+          "mean_pred": 0.06659022718667984,
+          "obs_default_rate": 0.09913793103448276
         },
         {
           "bin_start": 0.1,
           "bin_end": 0.2,
-          "count": 39,
-          "mean_pred": 0.15341675281524658,
-          "obs_default_rate": 0.28205128205128205
+          "count": 5072,
+          "mean_pred": 0.14669102430343628,
+          "obs_default_rate": 0.16029179810725552
         },
         {
           "bin_start": 0.2,
           "bin_end": 0.30000000000000004,
-          "count": 18,
-          "mean_pred": 0.24622736871242523,
-          "obs_default_rate": 0.05555555555555555
+          "count": 2055,
+          "mean_pred": 0.23896992206573486,
+          "obs_default_rate": 0.22579075425790754
         },
         {
           "bin_start": 0.30000000000000004,
           "bin_end": 0.4,
-          "count": 15,
-          "mean_pred": 0.34276533126831055,
-          "obs_default_rate": 0.2
+          "count": 530,
+          "mean_pred": 0.3391413688659668,
+          "obs_default_rate": 0.29056603773584905
         },
         {
           "bin_start": 0.4,
           "bin_end": 0.5,
-          "count": 9,
-          "mean_pred": 0.46232372522354126,
-          "obs_default_rate": 0.3333333333333333
+          "count": 139,
+          "mean_pred": 0.4366591274738312,
+          "obs_default_rate": 0.4028776978417266
         },
         {
           "bin_start": 0.5,
           "bin_end": 0.6000000000000001,
-          "count": 16,
-          "mean_pred": 0.551857590675354,
-          "obs_default_rate": 0.375
+          "count": 38,
+          "mean_pred": 0.5465455055236816,
+          "obs_default_rate": 0.42105263157894735
         },
         {
           "bin_start": 0.6000000000000001,
           "bin_end": 0.7000000000000001,
-          "count": 12,
-          "mean_pred": 0.6515048146247864,
-          "obs_default_rate": 0.4166666666666667
+          "count": 11,
+          "mean_pred": 0.6417948007583618,
+          "obs_default_rate": 0.36363636363636365
         },
         {
           "bin_start": 0.7000000000000001,
           "bin_end": 0.8,
-          "count": 12,
-          "mean_pred": 0.7469410300254822,
-          "obs_default_rate": 0.5
-        },
-        {
-          "bin_start": 0.8,
-          "bin_end": 0.9,
-          "count": 24,
-          "mean_pred": 0.8565831184387207,
-          "obs_default_rate": 0.625
-        },
-        {
-          "bin_start": 0.9,
-          "bin_end": 1.0,
-          "count": 264,
-          "mean_pred": 0.9844962358474731,
-          "obs_default_rate": 0.9128787878787878
+          "count": 3,
+          "mean_pred": 0.7640917897224426,
+          "obs_default_rate": 0.3333333333333333
         }
       ],
       "1": [
         {
           "bin_start": 0.0,
           "bin_end": 0.1,
-          "count": 244,
-          "mean_pred": 0.0021979319863021374,
-          "obs_default_rate": 0.012295081967213115
+          "count": 221,
+          "mean_pred": 0.07482708245515823,
+          "obs_default_rate": 0.09954751131221719
         },
         {
           "bin_start": 0.1,
           "bin_end": 0.2,
-          "count": 4,
-          "mean_pred": 0.15585994720458984,
-          "obs_default_rate": 0.25
+          "count": 760,
+          "mean_pred": 0.15320460498332977,
+          "obs_default_rate": 0.1763157894736842
         },
         {
           "bin_start": 0.2,
           "bin_end": 0.30000000000000004,
-          "count": 3,
-          "mean_pred": 0.28364527225494385,
-          "obs_default_rate": 0.6666666666666666
+          "count": 735,
+          "mean_pred": 0.24673326313495636,
+          "obs_default_rate": 0.23809523809523808
         },
         {
           "bin_start": 0.30000000000000004,
           "bin_end": 0.4,
-          "count": 3,
-          "mean_pred": 0.3549160659313202,
-          "obs_default_rate": 1.0
+          "count": 399,
+          "mean_pred": 0.3437111973762512,
+          "obs_default_rate": 0.3383458646616541
         },
         {
           "bin_start": 0.4,
           "bin_end": 0.5,
-          "count": 3,
-          "mean_pred": 0.41920244693756104,
-          "obs_default_rate": 0.3333333333333333
+          "count": 185,
+          "mean_pred": 0.4433319866657257,
+          "obs_default_rate": 0.3891891891891892
         },
         {
           "bin_start": 0.5,
           "bin_end": 0.6000000000000001,
-          "count": 1,
-          "mean_pred": 0.5760860443115234,
-          "obs_default_rate": 0.0
+          "count": 68,
+          "mean_pred": 0.5400718450546265,
+          "obs_default_rate": 0.4264705882352941
         },
         {
           "bin_start": 0.6000000000000001,
           "bin_end": 0.7000000000000001,
-          "count": 4,
-          "mean_pred": 0.6483891606330872,
-          "obs_default_rate": 0.5
+          "count": 31,
+          "mean_pred": 0.6398971080780029,
+          "obs_default_rate": 0.6451612903225806
         },
         {
           "bin_start": 0.7000000000000001,
           "bin_end": 0.8,
-          "count": 4,
-          "mean_pred": 0.7207385301589966,
-          "obs_default_rate": 0.5
-        },
-        {
-          "bin_start": 0.8,
-          "bin_end": 0.9,
           "count": 5,
-          "mean_pred": 0.8776713609695435,
+          "mean_pred": 0.7569258809089661,
           "obs_default_rate": 0.8
-        },
-        {
-          "bin_start": 0.9,
-          "bin_end": 1.0,
-          "count": 66,
-          "mean_pred": 0.9902556538581848,
-          "obs_default_rate": 0.9545454545454546
         }
       ]
     }
