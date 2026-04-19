@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -56,3 +57,100 @@ class PredictionResponse(BaseModel):
     credit_line_MXN: int
     top_drivers: list[TopDriver]
     explanation: str
+    borrower_id: Optional[int] = None
+    actual_outcome: Optional[str] = None
+    model_correct: Optional[bool] = None
+
+
+class BorrowerProfile(BaseModel):
+    # Identity
+    borrower_id: int
+    age: int
+    gender: str
+    city: str
+    rural_flag: int
+    indigenous_proxy: int
+    INE_verified_flag: int
+    married_flag: int
+    num_children: int
+    CURP_hash: Optional[str] = None
+
+    # Financial
+    monthly_income_MXN: float
+    rent_MXN: float
+    mobile_phone_plan_MXN: float
+    electricity_water_MXN: float
+    informal_loans_MXN: float
+    formal_debt_payments_MXN: float
+
+    # Banco Falabella relationship
+    store_visit_count: int
+    prior_CMR_usage: Optional[int] = None
+    CoDi_wallet_flag: int
+
+    # Group lending
+    group_id: int
+    cohesion_score: float
+    cycle_number: int
+
+    # Loan history
+    loan_count: int
+    avg_loan_amount: float
+    max_loan_amount: float
+    total_loan_amount: float
+    product_types: str
+    CMR_credit_line_share: float
+    OXXO_cash_backed_share: float
+
+    # Repayment history
+    mean_repayment_latency: float
+    on_time_repayment_share: float
+    worst_latency: float
+    total_repayments: int
+
+    # CDR behavioural signals
+    call_volume: float
+    call_routine_score: float
+    messaging_frequency: float
+    weekly_call_cv: float
+
+    # Mobile / app signals
+    app_opens: int
+    location_variance: float
+    Falabella_app_session_flag: int
+    routine_entropy: float
+    codi_txn_regularity: float
+    app_session_recency_days: float
+
+    # Social network
+    peer_connection_count: int
+    avg_tie_strength: float
+    whatsapp_link_share: float
+    codi_transfer_link_share: float
+
+    # Graph-derived (pre-computed)
+    degree_centrality: float
+    betweenness_centrality: float
+    neighborhood_default_rate_1hop: float
+    neighborhood_default_rate_2hop: float
+    pagerank_score: float
+    community_membership_flag: int
+
+    # Ground truth
+    default_flag: int
+    actual_outcome: str
+
+
+class BorrowerSearchResult(BaseModel):
+    borrower_id: int
+    age: int
+    gender: str
+    city: str
+    rural_flag: int
+    loan_count: int
+    default_flag: int
+
+
+class BorrowerListResponse(BaseModel):
+    total_borrowers: int
+    results: list[BorrowerSearchResult]

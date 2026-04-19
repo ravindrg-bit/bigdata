@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
+import numpy as np
 import pandas as pd
 
 try:
@@ -159,3 +160,46 @@ def compute_credit_line(phase: int, risk_score: float) -> int:
     }
     low, high = phase_limits[phase]
     return int(high - (high - low) * float(risk_score))
+
+
+def build_feature_vector_from_existing(
+    borrower_id: int,
+    features_table: pd.DataFrame,
+    embeddings_table: pd.DataFrame,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    For an existing borrower, pull pre-computed features and GNN embeddings
+    directly from stored tables.
+
+    Returns: (feature_vector, embedding_vector)
+    """
+
+    feature_row = features_table.loc[features_table["borrower_id"] == borrower_id]
+    if feature_row.empty:
+        raise ValueError(f"borrower_id {borrower_id} not found in features_table")
+
+    feature_cols = [c for c in features_table.columns if c != "borrower_id"]
+    feature_vector = feature_row.iloc[0][feature_cols].to_numpy(dtype=float)
+
+    embedding_row = embeddings_table.loc[embeddings_table["borrower_id"] == borrower_id]
+    if embedding_row.empty:
+        raise ValueError(f"borrower_id {borrower_id} not found in embeddings_table")
+
+    embedding_cols = sorted([c for c in embeddings_table.columns if c.startswith("emb_")])
+    embedding_vector = embedding_row.iloc[0][embedding_cols].to_numpy(dtype=float)
+
+    return feature_vector, embedding_vector
+
+
+def determine_cold_start_phase_existing(profile: dict) -> int:
+    """Determine borrower phase using observed existing-borrower data."""
+
+    store_visits = int(profile.get("store_visit_count", 0))
+    codi = int(profile.get("CoDi_wallet_flag", 0))
+    peers = int(profile.get("peer_connection_count", 0))
+
+    if store_visits < 3 and codi == 0 and peers == 0:
+        return 1
+    if peers == 0:
+        return 2
+    return 3
