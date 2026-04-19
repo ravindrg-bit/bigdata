@@ -1,0 +1,6 @@
+data/
+archive/
+mlruns/
+notebooks/
+__pycache__/
+*.parquet
