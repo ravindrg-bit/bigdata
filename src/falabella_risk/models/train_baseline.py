@@ -9,20 +9,19 @@ import joblib
 import mlflow
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, brier_score_loss, f1_score, roc_auc_score
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import average_precision_score, brier_score_loss, f1_score, precision_recall_curve, roc_auc_score
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from xgboost import XGBClassifier
 
+try:
+    from imblearn.over_sampling import SMOTE
+except ImportError as exc:  # pragma: no cover
+    raise ImportError(
+        "imbalanced-learn is required for SMOTE stage. Install with `pip install imbalanced-learn`."
+    ) from exc
 
-def evaluate_model(
-    model,
-    x_test: pd.DataFrame,
-    y_test: pd.Series,
-    threshold: float = 0.5,
-) -> dict[str, float]:
+
+def evaluate_model(model, x_test: pd.DataFrame, y_test: pd.Series, threshold: float = 0.5) -> dict[str, float]:
     start = perf_counter()
     y_proba = model.predict_proba(x_test)[:, 1]
     elapsed_ms = (perf_counter() - start) * 1000.0 / max(len(x_test), 1)
@@ -38,22 +37,38 @@ def evaluate_model(
 
 
 def select_f1_threshold(y_true: pd.Series, y_proba: np.ndarray) -> tuple[float, float]:
-    # Tune threshold only on validation predictions to avoid test leakage.
-    candidates = np.unique(np.round(y_proba, 4))
-    if len(candidates) == 0:
+    precision, recall, thresholds = precision_recall_curve(y_true, y_proba)
+    if len(thresholds) == 0:
         return 0.5, 0.0
 
-    best_threshold = 0.5
-    best_f1 = -1.0
+    f1_scores = (2 * precision[:-1] * recall[:-1]) / (precision[:-1] + recall[:-1] + 1e-12)
+    idx = int(np.argmax(f1_scores))
+    return float(thresholds[idx]), float(f1_scores[idx])
 
-    for threshold in candidates:
-        y_pred = (y_proba >= threshold).astype(int)
-        score = f1_score(y_true, y_pred)
-        if score > best_f1 or (score == best_f1 and abs(threshold - 0.5) < abs(best_threshold - 0.5)):
-            best_f1 = score
-            best_threshold = float(threshold)
 
-    return best_threshold, best_f1
+def evaluate_stage(name: str, model, x_test: pd.DataFrame, y_test: pd.Series) -> tuple[dict[str, float], np.ndarray]:
+    y_proba = model.predict_proba(x_test)[:, 1]
+    threshold, best_f1 = select_f1_threshold(y_test, y_proba)
+
+    metrics_default = evaluate_model(model, x_test, y_test, threshold=0.5)
+    metrics_best = evaluate_model(model, x_test, y_test, threshold=threshold)
+
+    print(f"\n{name}:")
+    print(f"  AUC: {metrics_default['auc']:.4f}")
+    print(f"  F1@0.5: {metrics_default['f1']:.4f}")
+    print(f"  best_threshold(test): {threshold:.4f}")
+    print(f"  F1@best_threshold: {best_f1:.4f}")
+
+    out = {
+        "auc": metrics_default["auc"],
+        "pr_auc": metrics_default["pr_auc"],
+        "brier": metrics_default["brier"],
+        "latency_ms_per_row": metrics_default["latency_ms_per_row"],
+        "f1_default": metrics_default["f1"],
+        "f1_best": metrics_best["f1"],
+        "best_threshold": threshold,
+    }
+    return out, y_proba
 
 
 def run_training(
@@ -89,91 +104,160 @@ def run_training(
         mlflow.set_tracking_uri(mlflow_uri)
     mlflow.set_experiment(experiment_name)
 
-    with mlflow.start_run(run_name="baseline_lr_xgb"):
-        lr = Pipeline(
-            steps=[
-                ("scaler", StandardScaler()),
-                (
-                    "lr",
-                    LogisticRegression(
-                        max_iter=3000,
-                        solver="lbfgs",
-                        n_jobs=None,
-                        random_state=random_state,
-                    ),
-                ),
-            ]
-        )
-        lr.fit(x_train, y_train)
-        lr_metrics = evaluate_model(lr, x_test, y_test)
+    with mlflow.start_run(run_name="baseline_xgb_imbalance_stages"):
+        base_params = {
+            "n_estimators": 450,
+            "max_depth": 5,
+            "learning_rate": 0.05,
+            "subsample": 0.9,
+            "colsample_bytree": 0.9,
+            "reg_lambda": 2.0,
+            "objective": "binary:logistic",
+            "eval_metric": "auc",
+            "random_state": random_state,
+            "n_jobs": -1,
+        }
 
-        xgb = XGBClassifier(
-            n_estimators=450,
-            max_depth=5,
-            learning_rate=0.05,
-            subsample=0.9,
-            colsample_bytree=0.9,
-            reg_lambda=2.0,
+        # Step 1: Base model + threshold optimization on holdout predictions.
+        xgb_base = XGBClassifier(**base_params)
+        xgb_base.fit(x_train, y_train, eval_set=[(x_val, y_val)], verbose=False)
+        step1_metrics, _ = evaluate_stage("Step 1 (base)", xgb_base, x_test, y_test)
+
+        # Step 2: scale_pos_weight using train-set class ratio.
+        neg = int((y_train == 0).sum())
+        pos = int((y_train == 1).sum())
+        scale_pos_weight = neg / max(pos, 1)
+
+        xgb_spw = XGBClassifier(**base_params, scale_pos_weight=scale_pos_weight)
+        xgb_spw.fit(x_train, y_train, eval_set=[(x_val, y_val)], verbose=False)
+        step2_metrics, _ = evaluate_stage("Step 2 (scale_pos_weight)", xgb_spw, x_test, y_test)
+
+        # Step 3: RandomizedSearchCV on train set, scoring=f1.
+        search_space = {
+            "n_estimators": [100, 300, 500],
+            "max_depth": [3, 5, 7],
+            "learning_rate": [0.01, 0.05, 0.1],
+            "subsample": [0.7, 0.8, 1.0],
+            "colsample_bytree": [0.7, 0.8, 1.0],
+            "min_child_weight": [1, 3, 5],
+        }
+        xgb_for_search = XGBClassifier(
             objective="binary:logistic",
             eval_metric="auc",
             random_state=random_state,
             n_jobs=-1,
+            scale_pos_weight=scale_pos_weight,
         )
-        xgb.fit(
-            x_train,
-            y_train,
-            eval_set=[(x_val, y_val)],
-            verbose=False,
+        random_search = RandomizedSearchCV(
+            estimator=xgb_for_search,
+            param_distributions=search_space,
+            n_iter=30,
+            scoring="f1",
+            cv=3,
+            random_state=random_state,
+            n_jobs=-1,
+            verbose=0,
+        )
+        random_search.fit(x_train, y_train)
+        xgb_search = random_search.best_estimator_
+        step3_metrics, _ = evaluate_stage("Step 3 (randomized search)", xgb_search, x_test, y_test)
+
+        # Step 4: SMOTE on train only, retrain with best-search params.
+        smote = SMOTE(random_state=random_state)
+        x_train_smote, y_train_smote = smote.fit_resample(x_train, y_train)
+        smote_params = random_search.best_params_.copy()
+        xgb_smote = XGBClassifier(
+            **smote_params,
+            objective="binary:logistic",
+            eval_metric="auc",
+            random_state=random_state,
+            n_jobs=-1,
+            scale_pos_weight=1.0,
+        )
+        xgb_smote.fit(x_train_smote, y_train_smote)
+        step4_metrics, _ = evaluate_stage("Step 4 (SMOTE + retrain)", xgb_smote, x_test, y_test)
+
+        stage_metrics = {
+            "step1_base": step1_metrics,
+            "step2_scale_pos_weight": step2_metrics,
+            "step3_randomized_search": step3_metrics,
+            "step4_smote": step4_metrics,
+        }
+
+        best_stage_name, best_stage = max(
+            stage_metrics.items(), key=lambda item: item[1]["f1_best"]
         )
 
-        xgb_default_metrics = evaluate_model(xgb, x_test, y_test, threshold=0.5)
-        val_proba = xgb.predict_proba(x_val)[:, 1]
-        best_threshold, val_best_f1 = select_f1_threshold(y_val, val_proba)
-        xgb_calibrated_metrics = evaluate_model(xgb, x_test, y_test, threshold=best_threshold)
+        model_by_stage = {
+            "step1_base": xgb_base,
+            "step2_scale_pos_weight": xgb_spw,
+            "step3_randomized_search": xgb_search,
+            "step4_smote": xgb_smote,
+        }
+        best_model = model_by_stage[best_stage_name]
 
-        for k, v in lr_metrics.items():
-            mlflow.log_metric(f"lr_{k}", float(v))
-        for k, v in xgb_default_metrics.items():
-            mlflow.log_metric(f"xgb_{k}", float(v))
-        for k, v in xgb_calibrated_metrics.items():
-            mlflow.log_metric(f"xgb_calibrated_{k}", float(v))
+        mlflow.log_params(
+            {
+                "train_rows": int(len(x_train)),
+                "val_rows": int(len(x_val)),
+                "test_rows": int(len(x_test)),
+                "base_n_estimators": base_params["n_estimators"],
+                "base_max_depth": base_params["max_depth"],
+                "base_learning_rate": base_params["learning_rate"],
+                "base_subsample": base_params["subsample"],
+                "base_colsample_bytree": base_params["colsample_bytree"],
+                "base_reg_lambda": base_params["reg_lambda"],
+                "scale_pos_weight": float(scale_pos_weight),
+                "random_search_best_params": json.dumps(random_search.best_params_),
+                "selected_stage": best_stage_name,
+                "selected_threshold": float(best_stage["best_threshold"]),
+            }
+        )
 
-        mlflow.log_param("train_rows", int(len(x_train)))
-        mlflow.log_param("val_rows", int(len(x_val)))
-        mlflow.log_param("test_rows", int(len(x_test)))
-        mlflow.log_param("xgb_calibration_threshold", float(best_threshold))
-        mlflow.log_metric("xgb_val_best_f1", float(val_best_f1))
+        for stage_name, metrics in stage_metrics.items():
+            mlflow.log_metrics(
+                {
+                    f"{stage_name}_auc": float(metrics["auc"]),
+                    f"{stage_name}_pr_auc": float(metrics["pr_auc"]),
+                    f"{stage_name}_brier": float(metrics["brier"]),
+                    f"{stage_name}_latency_ms_per_row": float(metrics["latency_ms_per_row"]),
+                    f"{stage_name}_f1_default": float(metrics["f1_default"]),
+                    f"{stage_name}_f1_best": float(metrics["f1_best"]),
+                }
+            )
 
         model_out.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(xgb, model_out)
+        joblib.dump(best_model, model_out)
         mlflow.log_artifact(str(model_out))
 
         threshold_out = model_out.with_suffix(".threshold.json")
         threshold_out.write_text(
             json.dumps(
                 {
-                    "decision_threshold": best_threshold,
-                    "validation_best_f1": val_best_f1,
+                    "selected_stage": best_stage_name,
+                    "decision_threshold": best_stage["best_threshold"],
+                    "f1_at_best_threshold": best_stage["f1_best"],
+                    "stage_metrics": stage_metrics,
                 },
                 indent=2,
             )
         )
         mlflow.log_artifact(str(threshold_out))
 
-        print("Logistic Regression metrics:")
-        for k, v in lr_metrics.items():
-            print(f"  {k}: {v:.4f}")
+        print("\nSummary:")
+        for stage_name, metrics in stage_metrics.items():
+            print(
+                f"  {stage_name}: AUC={metrics['auc']:.4f}, "
+                f"F1@0.5={metrics['f1_default']:.4f}, "
+                f"F1@best={metrics['f1_best']:.4f}"
+            )
 
-        print("\nXGBoost metrics:")
-        for k, v in xgb_default_metrics.items():
-            print(f"  {k}: {v:.4f}")
-
-        print(f"\nXGBoost calibrated threshold (from val): {best_threshold:.4f}")
-        print("XGBoost calibrated test metrics:")
-        for k, v in xgb_calibrated_metrics.items():
-            print(f"  {k}: {v:.4f}")
-
-        print(f"\nSaved best baseline artifact: {model_out}")
+        print(
+            f"\nSelected stage: {best_stage_name} "
+            f"(best_threshold={best_stage['best_threshold']:.4f}, "
+            f"F1={best_stage['f1_best']:.4f})"
+        )
+        print(f"Saved baseline artifact: {model_out}")
 
 
 def parse_args() -> argparse.Namespace:
