@@ -7,9 +7,15 @@ import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from feature_builder import build_feature_vector, compute_credit_line, determine_cold_start_phase
-from model_loader import get_decision_threshold, get_explainer, get_feature_label, get_model
-from schemas import BorrowerInput, PredictionResponse, TopDriver
+try:
+    from .feature_builder import build_feature_vector, compute_credit_line, determine_cold_start_phase
+    from .model_loader import get_decision_threshold, get_explainer, get_feature_label, get_model
+    from .schemas import BorrowerInput, PredictionResponse, TopDriver
+except ImportError:
+    # Supports local invocation from the api/ directory: uvicorn main:app
+    from feature_builder import build_feature_vector, compute_credit_line, determine_cold_start_phase
+    from model_loader import get_decision_threshold, get_explainer, get_feature_label, get_model
+    from schemas import BorrowerInput, PredictionResponse, TopDriver
 
 
 app = FastAPI(
@@ -20,7 +26,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: restrict to Lovable domain
+    # TODO: Replace the placeholder domain with your real Lovable production URL once known.
+    allow_origins=[
+        "https://your-project.lovable.app",
+        "http://localhost:5173",  # local Lovable dev
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

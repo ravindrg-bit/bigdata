@@ -4,7 +4,10 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from schemas import BorrowerInput
+try:
+    from .schemas import BorrowerInput
+except ImportError:
+    from schemas import BorrowerInput
 
 
 # Exact features.parquet column order (38 columns).
