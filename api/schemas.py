@@ -51,8 +51,11 @@ class TopDriver(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    raw_score: float
+    risk_percentile: float
+    risk_band: Literal["low", "medium", "high"]
     risk_score: float
-    decision: Literal["approve", "decline"]
+    decision: Literal["approve", "approve_with_conditions", "decline"]
     cold_start_phase: Literal[1, 2, 3]
     credit_line_MXN: int
     top_drivers: list[TopDriver]

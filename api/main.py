@@ -21,11 +21,13 @@ try:
         determine_cold_start_phase_existing,
     )
     from .model_loader import (
-        get_decision_threshold,
         get_explainer,
         get_feature_label,
         get_graph_signal_label,
+        get_model_info,
         get_model,
+        percentile_to_decision,
+        score_to_percentile,
     )
     from .schemas import (
         BorrowerInput,
@@ -48,11 +50,13 @@ except ImportError:
         determine_cold_start_phase_existing,
     )
     from model_loader import (
-        get_decision_threshold,
         get_explainer,
         get_feature_label,
         get_graph_signal_label,
+        get_model_info,
         get_model,
+        percentile_to_decision,
+        score_to_percentile,
     )
     from schemas import (
         BorrowerInput,
@@ -105,6 +109,7 @@ EXISTING_EMBEDDING_COLUMNS = sorted([c for c in EMBEDDINGS_TABLE.columns if c.st
 
 ENDPOINT_DESCRIPTIONS = [
     {"method": "GET", "path": "/health", "description": "Health check"},
+    {"method": "GET", "path": "/model-info", "description": "Scoring method and decision thresholds"},
     {"method": "GET", "path": "/stats", "description": "Dataset summary stats"},
     {"method": "GET", "path": "/schema", "description": "API schema and endpoint docs"},
     {"method": "GET", "path": "/borrower/random", "description": "Random borrower profile"},
@@ -201,29 +206,51 @@ def _build_model_input(feature_df: pd.DataFrame, phase: int) -> pd.DataFrame:
     return _align_to_model_features(x)
 
 
-def _build_explanation_sentence(tabular_drivers: list[TopDriver]) -> str:
+def _to_ordinal(value: int) -> str:
+    if 10 <= value % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(value % 10, "th")
+    return f"{value}{suffix}"
+
+
+def _build_explanation_sentence(
+    tabular_drivers: list[TopDriver],
+    risk_percentile: float,
+    risk_band: str,
+) -> str:
+    percentile_value = int(round(float(risk_percentile) * 100))
+    ordinal = _to_ordinal(percentile_value)
+    band_sentence = (
+        f"This applicant's risk is at the {ordinal} percentile - "
+        f"higher risk than {percentile_value}% of the borrower population "
+        f"({risk_band} band)."
+    )
+
     if not tabular_drivers:
-        return "No dominant risk drivers were identified for this prediction."
+        return band_sentence
 
     if len(tabular_drivers) == 1:
         d1 = tabular_drivers[0]
         return (
+            f"{band_sentence} "
             f"Primary factor: {d1.feature} {d1.direction} "
             f"(SHAP {d1.shap_contribution:+.4f})."
         )
 
     d1, d2 = tabular_drivers[0], tabular_drivers[1]
     return (
+        f"{band_sentence} "
         f"Primary factors: {d1.feature} {d1.direction} (SHAP {d1.shap_contribution:+.4f}) "
         f"and {d2.feature} {d2.direction} (SHAP {d2.shap_contribution:+.4f})."
     )
 
 
-def _score_model_input(model_input: pd.DataFrame) -> tuple[float, list[TopDriver], str]:
+def _score_model_input(model_input: pd.DataFrame) -> tuple[float, list[TopDriver], list[TopDriver]]:
     model = get_model()
     explainer = get_explainer()
 
-    risk_score = float(model.predict_proba(model_input)[0, 1])
+    raw_score = float(model.predict_proba(model_input)[0, 1])
 
     shap_output = explainer.shap_values(model_input)
     shap_vector = _extract_shap_vector(shap_output)
@@ -256,11 +283,13 @@ def _score_model_input(model_input: pd.DataFrame) -> tuple[float, list[TopDriver
             )
         )
 
-    top_drivers = sorted(
+    tabular_drivers = sorted(
         tabular_drivers,
         key=lambda d: abs(float(d.shap_contribution)),
         reverse=True,
     )
+
+    top_drivers = tabular_drivers.copy()
 
     if abs(graph_total) > 0.05:
         graph_direction = "increased risk" if graph_total >= 0 else "reduced risk"
@@ -279,24 +308,26 @@ def _score_model_input(model_input: pd.DataFrame) -> tuple[float, list[TopDriver
         reverse=True,
     )[:6]
 
-    explanation = _build_explanation_sentence(tabular_drivers)
-    return risk_score, top_drivers, explanation
+    return raw_score, top_drivers, tabular_drivers
 
 
 @app.post("/predict/manual", response_model=PredictionResponse)
 def predict_manual(payload: BorrowerInput) -> PredictionResponse:
-    decision_threshold = get_decision_threshold()
-
     feature_df = build_feature_vector(payload)
     phase = determine_cold_start_phase(payload)
     model_input = _build_model_input(feature_df, phase)
 
-    risk_score, top_drivers, explanation = _score_model_input(model_input)
-    decision = "approve" if risk_score < decision_threshold else "decline"
-    credit_line = compute_credit_line(phase, risk_score)
+    raw_score, top_drivers, tabular_drivers = _score_model_input(model_input)
+    risk_percentile = score_to_percentile(raw_score)
+    decision, risk_band = percentile_to_decision(risk_percentile)
+    credit_line = compute_credit_line(phase, risk_percentile)
+    explanation = _build_explanation_sentence(tabular_drivers, risk_percentile, risk_band)
 
     return PredictionResponse(
-        risk_score=risk_score,
+        raw_score=raw_score,
+        risk_percentile=risk_percentile,
+        risk_band=risk_band,
+        risk_score=risk_percentile,
         decision=decision,
         cold_start_phase=phase,
         credit_line_MXN=credit_line,
@@ -323,21 +354,26 @@ def predict_existing(borrower_id: int) -> PredictionResponse:
     existing_input = pd.DataFrame([combined_values], columns=combined_columns)
     model_input = _align_to_model_features(existing_input)
 
-    risk_score, top_drivers, explanation = _score_model_input(model_input)
-    decision = "approve" if risk_score < 0.5 else "decline"
+    raw_score, top_drivers, tabular_drivers = _score_model_input(model_input)
+    risk_percentile = score_to_percentile(raw_score)
+    decision, risk_band = percentile_to_decision(risk_percentile)
+    explanation = _build_explanation_sentence(tabular_drivers, risk_percentile, risk_band)
 
     phase = determine_cold_start_phase_existing(row.to_dict())
-    credit_line = compute_credit_line(phase, risk_score)
+    credit_line = compute_credit_line(phase, risk_percentile)
 
     default_flag = int(_to_native(row.get("default_flag")) or 0)
     actual_outcome = "defaulted" if default_flag == 1 else "repaid"
     model_correct = bool(
-        (decision == "approve" and default_flag == 0)
+        (decision != "decline" and default_flag == 0)
         or (decision == "decline" and default_flag == 1)
     )
 
     return PredictionResponse(
-        risk_score=risk_score,
+        raw_score=raw_score,
+        risk_percentile=risk_percentile,
+        risk_band=risk_band,
+        risk_score=risk_percentile,
         decision=decision,
         cold_start_phase=phase,
         credit_line_MXN=credit_line,
@@ -353,6 +389,11 @@ def predict_existing(borrower_id: int) -> PredictionResponse:
 def health() -> dict[str, Any]:
     loaded = get_model() is not None
     return {"status": "healthy", "model_loaded": loaded}
+
+
+@app.get("/model-info")
+def model_info() -> dict[str, float | int | str]:
+    return get_model_info()
 
 
 @app.get("/stats")
