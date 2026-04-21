@@ -131,6 +131,24 @@ make test
 
 Current tests include placeholder stubs for core modules and a test harness-ready structure under tests/.
 
+## API scoring policy
+
+The FastAPI service under api/ keeps endpoint contracts stable for frontend clients while adding
+traceability and conservative manual cold-start behavior:
+
+- `POST /predict/existing/{borrower_id}` uses precomputed tabular features + real graph embeddings.
+- `POST /predict/manual` accepts the existing manual form payload and adds optional
+	`graph_verification` metadata.
+- Without successful graph verification, manual scoring uses:
+	- training-set medians for unavailable historical fields,
+	- conservative phase gating (no phase-3 promotion from self-reported peer fields alone),
+	- zero embeddings with exact model embedding dimension.
+- `POST /debug/compare/existing-vs-manual/{borrower_id}` provides internal diagnostics:
+	38-feature side-by-side mapping, source counts, embedding stats, prediction comparison,
+	and SHAP top-driver overlap/divergence.
+- `GET /model-info` and `GET /schema` expose model/schema/policy versions and manual scoring
+	observability notes for UI integration and audit trails.
+
 ## Reproducibility notes
 
 - Use fixed seeds in CLI commands (default seed is 42 across modules).
