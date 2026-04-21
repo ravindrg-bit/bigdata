@@ -12,7 +12,6 @@ import torch
 from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 
-
 LEAKY_FEATURES = {
     # Post-outcome repayment behavior cannot be known at credit decision time.
     "repayment_latency_days",
@@ -47,9 +46,7 @@ def build_graph_tensors(
     y_map = labels.set_index("borrower_id")["default_flag"]
     y = y_map.loc[borrower_ids].to_numpy(dtype=np.int64)
 
-    candidate_cols = [
-        col for col in features.columns if col not in {"borrower_id", "default_flag"}
-    ]
+    candidate_cols = [col for col in features.columns if col not in {"borrower_id", "default_flag"}]
     excluded_cols: list[str] = []
     if drop_leaky_features:
         for col in list(candidate_cols):
@@ -96,7 +93,6 @@ class GraphSAGEClassifier(torch.nn.Module):
 
 
 def split_indices(y: np.ndarray, seed: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    n = len(y)
     rng = np.random.default_rng(seed)
 
     pos_idx = np.flatnonzero(y == 1)
@@ -162,9 +158,11 @@ def train_graphsage(
     edges = pd.read_parquet(edges_path)
     labels = pd.read_parquet(labels_path)
 
-    y_np = labels.set_index("borrower_id").loc[features["borrower_id"].to_numpy()][
-        "default_flag"
-    ].to_numpy(dtype=np.int64)
+    y_np = (
+        labels.set_index("borrower_id")
+        .loc[features["borrower_id"].to_numpy()]["default_flag"]
+        .to_numpy(dtype=np.int64)
+    )
     train_idx, val_idx, test_idx = split_indices(y_np, seed)
 
     x, edge_index, y, borrower_ids, used_feature_cols = build_graph_tensors(
@@ -175,7 +173,9 @@ def train_graphsage(
         drop_leaky_features=drop_leaky_features,
     )
 
-    excluded = sorted([c for c in LEAKY_FEATURES if c in features.columns and c not in used_feature_cols])
+    excluded = sorted(
+        [c for c in LEAKY_FEATURES if c in features.columns and c not in used_feature_cols]
+    )
     print(f"Using {len(used_feature_cols)} node features for GraphSAGE input")
     if excluded:
         print("Excluded potential leakage features:", ", ".join(excluded))
@@ -329,7 +329,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--epochs", type=int, default=35, help="Number of training epochs")
     parser.add_argument("--learning-rate", type=float, default=0.003, help="Learning rate")
-    parser.add_argument("--hidden-channels", type=int, default=128, help="Hidden size for GraphSAGE")
+    parser.add_argument(
+        "--hidden-channels", type=int, default=128, help="Hidden size for GraphSAGE"
+    )
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout probability")
     parser.add_argument("--weight-decay", type=float, default=1e-4, help="Adam weight decay")
     parser.add_argument(

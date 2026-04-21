@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import joblib
 import numpy as np
 import shap
-
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "models" / "hybrid_ensemble.pkl"
@@ -14,6 +14,9 @@ SCORE_PERCENTILES_PATH = ROOT / "models" / "score_percentiles.npy"
 CAUTION_THRESHOLD_PERCENTILE = 0.60
 DECLINE_THRESHOLD_PERCENTILE = 0.80
 REFERENCE_AUC = 0.98
+MODEL_VERSION = os.getenv("MODEL_VERSION", "hybrid_ensemble.pkl")
+FEATURE_SCHEMA_VERSION_DEFAULT = "features.parquet.v1.38"
+MANUAL_SCORING_POLICY_VERSION_DEFAULT = "manual-cold-start.v2"
 
 
 FEATURE_LABELS = {
@@ -111,8 +114,18 @@ def percentile_to_decision(percentile: float) -> tuple[str, str]:
     return "decline", "high"
 
 
-def get_model_info() -> dict[str, float | int | str]:
+def get_model_info(
+    embedding_dimension: int | None = None,
+    feature_schema_version: str = FEATURE_SCHEMA_VERSION_DEFAULT,
+    manual_policy_version: str = MANUAL_SCORING_POLICY_VERSION_DEFAULT,
+    manual_zero_embeddings_default: bool = True,
+) -> dict[str, float | int | str | bool]:
     return {
+        "model_version": MODEL_VERSION,
+        "feature_schema_version": feature_schema_version,
+        "embedding_dimension": int(embedding_dimension or 0),
+        "manual_scoring_policy_version": manual_policy_version,
+        "manual_zero_embeddings_default": bool(manual_zero_embeddings_default),
         "scoring_method": "percentile_rank",
         "decline_threshold_percentile": DECLINE_THRESHOLD_PERCENTILE,
         "caution_threshold_percentile": CAUTION_THRESHOLD_PERCENTILE,

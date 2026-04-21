@@ -6,6 +6,26 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class GraphVerificationInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    verification_method: Literal["linked_existing_nodes"] = Field(
+        ...,
+        description="Verification mode for manual graph claims",
+    )
+    linked_borrower_ids: list[int] = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description="Existing borrower IDs with verified linkage evidence",
+    )
+    verifier_reference: Optional[str] = Field(
+        default=None,
+        max_length=128,
+        description="Optional verifier reference or ticket ID",
+    )
+
+
 class BorrowerInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -21,7 +41,9 @@ class BorrowerInput(BaseModel):
     # Financial profile
     monthly_income_MXN: float = Field(..., ge=1200, le=150000, description="Monthly income in MXN")
     rent_MXN: float = Field(..., ge=0, le=15000, description="Monthly rent in MXN")
-    informal_loans_flag: Literal[0, 1] = Field(..., description="1 if informal loans active, else 0")
+    informal_loans_flag: Literal[0, 1] = Field(
+        ..., description="1 if informal loans active, else 0"
+    )
     formal_debt_flag: Literal[0, 1] = Field(..., description="1 if formal debt active, else 0")
     electricity_water_MXN: float = Field(..., ge=0, le=2000, description="Utilities spend in MXN")
 
@@ -40,7 +62,16 @@ class BorrowerInput(BaseModel):
     # Social network
     peer_connections: int = Field(..., ge=0, le=20, description="Peer connection count")
     group_cohesion_score: float = Field(..., ge=0.0, le=1.0, description="Group cohesion score")
-    neighborhood_default_rate: float = Field(..., ge=0.0, le=1.0, description="Neighborhood default rate")
+    neighborhood_default_rate: float = Field(
+        ..., ge=0.0, le=1.0, description="Neighborhood default rate"
+    )
+    graph_verification: Optional[GraphVerificationInput] = Field(
+        default=None,
+        description=(
+            "Optional verified graph linkage payload. If omitted or invalid, manual scoring "
+            "uses conservative graph defaults and zero embeddings."
+        ),
+    )
 
 
 class TopDriver(BaseModel):
